@@ -1,0 +1,93 @@
+WIFITE
+=============
+written in python by
+derv82 at gmail dot com
+
+
+ABOUT
+=============
+automates aircrack-ng suite to crack WEP/WPA encrypted network(s).
+
+...one step closer to the "big red button"
+
+
+TESTED WITH
+=============
+Python:   2.4, 2.5.3
+Linux:    2.6.34
+Distro:   BackTrack4 RC1 (Ubuntu 8.10)
+Chipset:  RTL8187 (Alfa AWUS036H), RT2500 (Nintendo Wifi USB Connector)
+Router:   Netgear WPN824v3
+Caffeine: Dr Pepper
+
+
+USES
+=============
+python
+aircrack-ng suite:
+    aircrack-ng, airmon-ng, airodump-ng
+    aireplay-ng, packetforge-ng
+macchanger
+various linux tools:
+    echo, rm, cp, ls, killall,
+    ifconfig, iwconfig, wc
+
+
+COPYING
+=============
+this program is distrbuted under the GNU General Public License v3.
+the GPL is available here: http://www.gnu.org/licenses/gpl-3.0.txt
+
+feel free to distrubte this script for non-commercial purposes.
+and you can edit this script at your heart's content!
+
+
+COMMAND LINE
+=============
+there are a lot of commandline options with wifite. check them out!
+./wifite.py -help
+this is so you can make a one-liner that does everything you want.
+throw that line into a script on the desktop and it's one click away!
+
+
+TIPS & TRICKS
+=============
+Ctrl+C options (during attacks):
+  if your WEP method isn't working,Ctrl+C gives options to move on
+  if you want to move onto cracking the next target
+  if you want to skip targets and move onto WPA cracking
+  if you want to stop and exit the program immediately
+
+
+the -p (--power) option is to filter out APs that are too far away
+each wifi card is different, so it's up to you to find the power 
+level where attacks fail.
+
+
+in wifite.py, change:
+   DICT=''
+to:
+   DICT='your/favorite/wordlist.txt'
+and you'll never get prompted for a wordlist again!
+the program will automatically use the wordlist you enter.
+
+alternatively, change the line to:
+   DICT='none'
+and you'll never get prompted for a wordlist, 
+but it will never crack WPA! it will only save captured handshakes.
+
+
+there's other options to edit in wifite.py:
+ -default WEP/WPA_MAXWAIT (how long before giving up on an attack)
+ -WEP_PPS (packets per second)
+ -all wep attack methods (WEP_CHOP _ARP _FRAG _P0841),
+     *set these =False to skip the attack method
+these save you from typing the command-line equivalents everytime.
+
+
+BIG RED BUTTON MODE
+./wifite.py -all
+
+
+---------------------
+(c) 2010 derv merkler
