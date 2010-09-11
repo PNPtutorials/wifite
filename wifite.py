@@ -18,7 +18,7 @@ import re                     # reg-ex: for replacing
 import urllib                 # needed for updating the script
 
 # current revision
-REVISION=6
+REVISION=7
 
 # default wireless interface (blank to prompt)
 IFACE=''
@@ -78,7 +78,7 @@ GR = "\033[37m"; # gray
 
 ############################################################################### update
 def get_revision():
-	rev  =-1
+	irev  =-1
 	desc =''
 	since=''
 	
@@ -98,20 +98,21 @@ def get_revision():
 			print R+'[+] invalid revision number: "'+rev+'"'
 	
 	# get the description
-	start= page.find(' href="detail?r=4">', start + 3)
+	start= page.find(' href="detail?r='+str(irev)+'">', start + 3)
 	stop = page.find('</a>', start)
 	if start != -1 and stop != -1:
 		start += 19
 		desc=page[start:stop].strip()
+		desc=desc.replace("&#39;","'")
 	
 	# get the time last modified
-	start= page.find(' href="detail?r=4">', start + 3)
+	start= page.find(' href="detail?r='+str(irev)+'">', start + 3)
 	stop = page.find('</a>', start)
 	if start != -1 and stop != -1:
 		start += 19
 		since=page[start:stop]
 	
-	return (rev, desc, since)
+	return (irev, desc, since)
 
 def update():
 	global REVISION
