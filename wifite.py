@@ -15,6 +15,7 @@ import string, sys            # basic stuff
 import os, signal, subprocess # needed for shells, sending commands, etc
 import time                   # need to pause, track how long methods take
 import re                     # reg-ex: for replacing
+import urllib                 # needed for updating the script
 
 # default wireless interface (blank to prompt)
 IFACE=''
@@ -24,6 +25,9 @@ DICT=''
 
 # default essid to attack
 ESSID=''
+
+# current revision
+REVISION=4
 
 # WPA constants
 WPA=True
@@ -42,8 +46,9 @@ AUTOCRACK  =5000
 CHANGE_MAC =False
 
 # never really display these to the user, hmm...
-ATTEMPTS=0
-CRACKED =0
+ATTEMPTS  =0
+CRACKED   =0
+HANDSHAKES=0
 
 # default channel (0 checks all channels)
 CHANNEL='0'
@@ -71,10 +76,106 @@ P  = "\033[35m"; # purple
 C  = "\033[36m"; # cyan
 GR = "\033[37m"; # gray
 
+############################################################################### update
+def get_revision():
+	rev  =-1
+	desc =''
+	since=''
+	
+	sock = urllib.urlopen('http://code.google.com/p/wifite/source/list')
+	page = sock.read()
+	
+	# get the revision
+	start= page.find('href="detail?r=')
+	stop = page.find('">', start)
+	if start != -1 and stop != -1:
+		start += 15
+		rev=page[start:stop]
+		try:
+			irev=int(rev)
+		except ValueError:
+			rev=rev.split('\n')[0]
+			print R+'[+] invalid revision number: "'+rev+'"'
+	
+	# get the description
+	start= page.find(' href="detail?r=4">', start + 3)
+	stop = page.find('</a>', start)
+	if start != -1 and stop != -1:
+		start += 19
+		desc=page[start:stop].strip()
+	
+	# get the time last modified
+	start= page.find(' href="detail?r=4">', start + 3)
+	stop = page.find('</a>', start)
+	if start != -1 and stop != -1:
+		start += 19
+		since=page[start:stop]
+	
+	return (rev, desc, since)
+
+def update():
+	global REVISION
+	
+	try:
+		print GR+'[+] '+W+'checking for updates...'
+		
+		r,d,t=get_revision()
+		
+		r=int(r)
+		if r == -1:
+			print GR+'[+] '+R+'unable to access code.google.com; aborting update'
+		
+		elif r > REVISION:
+			print GR+'[+] '+W+'there is a '+G+'new version'+W+' of wifite.py! (r'+str(r)+')'
+			print GR+'[+] '+W+'changes:'+W
+			print GR+'    -'+d.replace('\n','\n    -')
+			print GR+'[+] '+W+'updated '+G+t+W+'\n'
+			print GR+'[+] '+W+'do you want to '+G+'download and upgrade'+W+' wifite.py? (y/n): '
+			ans=raw_input()
+			if ans.lower()[0] == 'y':
+				upgrade()
+			else:
+				print GR+'[+] '+W+'upgrading '+O+'aborted'+W+''
+		
+		elif r == REVISION:
+			print GR+'[+] '+W+'your copy of wifite.py is '+G+'up to date'
+		
+		else:
+			print GR+'[+] '+W+'you somehow have a '+G+'futuristic revision'+W+' of wifite.py'
+	except KeyboardInterrupt:
+		print R+'[+] ^C interrupted; aborting updater'
+	
+def upgrade():
+	print GR+'[+] '+G+'downloading'+W+' update...'
+	sock = urllib.urlopen('http://wifite.googlecode.com/svn/trunk/wifite.py')
+	page = sock.read()
+	
+	f=open('wifite_new.py','w')
+	f.write(page)
+	f.close()
+	
+	f=open('update_wifite.sh','w')
+	f.write('#!/bin/sh\n')
+	f.write('rm -rf wifite.py\n')
+	f.write('mv wifite_new.py wifite.py\n')
+	f.write('rm -rf update_wifite.sh\n')
+	f.write('chmod +x wifite.py\n')
+	#f.write('python','wifite.py','-h')
+	f.close()
+	subprocess.call(['chmod','+x','update_wifite.sh'])
+	
+	#print GR+'[+] '+G+'launching'+W+' new version...'
+	
+	subprocess.call(['sh','update_wifite.sh'])
+	
+	print GR+'[+] '+G+'updated!'+W+' type "./wifite.py" to run again'
+	sys.exit(0)
+	
+
 ############################################################################### main
 def main():
 	""" where the magic happens """
-	global IFACE, ATTACK, DICT, THIS_MAC, SKIP_TO_WPA
+	global IFACE, ATTACK, DICT, THIS_MAC, SKIP_TO_WPA, ATTEMPTS
 	
 	try:
 		# print banner
@@ -112,6 +213,8 @@ def main():
 		dict_check() # get dictionary from user if need be
 		
 		for x in ATTACK:
+			ATTEMPTS += 1 # increment number of attempts
+			
 			attack(x - 1) # subtract one because arrays start at 0
 			
 			# if user breaks during an attack and wants to skip to cracking...
@@ -145,10 +248,11 @@ def main():
 
 ############################################################################### banner
 def banner():
+	global REVISION
 	""" displays the pretty app logo + text  """
 	print ''
 	print G+"  .;'                     `;,    "
-	print G+" .;'  ,;'             `;,  `;,   "+W+"WiFite"
+	print G+" .;'  ,;'             `;,  `;,   "+W+"WiFite r"+str(REVISION)
 	print G+".;'  ,;'  ,;'     `;,  `;,  `;,  "
 	print G+"::   ::   :   "+GR+"( )"+G+"   :   ::   ::  "+GR+"mass WEP/WPA cracker"
 	print G+"':.  ':.  ':. "+GR+"/ \\"+G+" ,:'  ,:'  ,:'  "
@@ -168,7 +272,8 @@ def check_root():
 def handle_args(args):
 	""" handles arguments, sets global variables if specified """
 	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT
-	global W, BLA, R, G, O, B, P, C, GR # colors!
+	global W, BLA, R, G, O, B, P, C, GR # colors
+	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841 # wep attacks
 	
 	# first loop, finds '-no-color' and '-help', in case the user wants to use these!
 	for a in args:
@@ -328,6 +433,27 @@ def handle_args(args):
 			CHANGE_MAC=True
 			print GR+'[+] '+W+'change mac during WEP attack '+G+'enabled'+W
 		
+		elif a == '-noarp' or a == '--no-arp':
+			WEP_ARP=False
+			print GR+'[+] '+W+'arp-replay attack '+G+'disabled'+W
+		
+		elif a == '-nochop' or a == '--no-chop':
+			WEP_CHOP=False
+			print GR+'[+] '+W+'chop-chop attack '+G+'disabled'+W
+		
+		elif a == '-nofrag' or a == '--no-frag':
+			WEP_FRAG=False
+			print GR+'[+] '+W+'fragmentation attack '+G+'disabled'+W
+		
+		elif a == '-no0841' or a == '--no-p0841':
+			WEP_P0841=False
+			print GR+'[+] '+W+'-p 0841 attack '+G+'disabled'+W
+		
+		elif a == '-update' or a == '--update' or a == '-upgrade' or a == '--upgrade':
+			# upgrayedd
+			update()
+			sys.exit(0)
+		
 		i += 1
 		
 	if WEP==False and WPA==False:
@@ -339,10 +465,11 @@ def handle_args(args):
 
 ############################################################################### logit
 def logit(txt):
-	"""saves txt to both file log and list log"""
+	""" saves txt to both file log and list log
+		prepends date and time to the file log entry"""
 	THE_LOG.append(txt)
 	f = open('log.txt', 'a')
-	f.write(txt +'\n')
+	f.write(datetime()+' ' + txt +'\n')
 	f.close()
 
 ############################################################################### halp
@@ -350,10 +477,14 @@ def halp(full=False):
 	""" displays the help screen 
 		if full=True, prints the full help (detailed info)
 	"""
+	
 	print GR+'Usage: '+W+'python wifite.py '+G+'[SETTINGS] [FILTERS]\n'
 	
 	if not full:
-		print G+'  -help, --help\t'+GR+'display the full help screen\n'
+		print G+'  -help    '+GR+'display the full help screen\n'
+		print G+'  -upgrade '+GR+'download/install latest revision\n'
+	else:
+		print G+'  -upgrade\t '+GR+'download/install latest revision\n'
 	
 	print GR+'  SETTINGS'
 	#IFACE
@@ -363,7 +494,7 @@ def halp(full=False):
 		print '             \t the program automatically selects a wifi device in monitor mode'
 		print '             \t prompts for input if no monitor-mode devices are found\n'
 	else:
-		print G+'  -i\t\t'+GR+'wireless interface'
+		print G+'  -i\t\t  '+GR+'wireless interface'
 	#DICT
 	if full:
 		print G+'  -d, --dict\t'+GR+'     e.g. -d /pentest/passwords/wordlists/darkc0de.lst'
@@ -373,14 +504,14 @@ def halp(full=False):
 		print '             \t e.g. -d "none"'
 		print '             \t does not attempt to crack WPA handshakes, only captures and stores them\n'
 	else:
-		print G+'  -d\t\t'+GR+'dictionary file, for WPA handshake cracking'
+		print G+'  -d\t\t  '+GR+'dictionary file, for WPA handshake cracking'
 	#WPAWAIT
 	if full:
 		print G+'  --wpa-wait\t'+GR+'     e.g. -wpaw 15'
 		print '          \t sets the maximum time to wait for a wpa handshake (in minutes)'
 		print '          \t enter "0" to wait endlessly\n'
 	else:
-		print G+'  -wpaw\t\t'+GR+'time to wait for wpa handshake (in minutes)'
+		print G+'  -wpaw\t\t  '+GR+'time to wait for wpa handshake (in minutes)'
 	#WEPWAIT
 	if full:
 		print G+'  --wep-wait\t'+GR+'     e.g. -wepw 10'
@@ -390,28 +521,38 @@ def halp(full=False):
 		print '          \t if you have all 4 attacks (arp, frag, chop, 0841), it would take 40 minutes'
 		print '          \t enter "0" to wait endlessly\n'
 	else:
-		print G+'  -wepw\t\t'+GR+'max time (in minutes) to capture/crack WEP key of each access point'
+		print G+'  -wepw\t\t  '+GR+'max time (in minutes) to capture/crack WEP key of each access point'
 	#PPS
 	if full:
-		print G+'  --pps\t\t'+GR+'     e.g. -pps 400'
+		print G+'  --pps\t\t\t'+GR+'     e.g. -pps 400'
 		print '          \t packets-per-second (used only by WEP attacks) - larger pps means more ivs'
 		print '          \t however, smaller pps is recommended for weaker access points (or far-away APs)\n'
 		
 	else:
-		print G+'  -pps\t\t'+GR+'packets-per-second (for WEP replay attacks)'
+		print G+'  -pps\t\t  '+GR+'packets-per-second (for WEP replay attacks)'
 	#CHANGE_MAC
 	if full:
 		print G+'  --change-mac\t'+GR+' chanes mac address of interface to a client\'s mac (if found)'
 		print '          \t only affects WEP-based attacks\n'
 		
 	else:
-		print G+'  -mac\t\t'+GR+'for WEP attacks only: change mac address to client\'s mac (if found)'
-	
+		print G+'  -mac\t\t  '+GR+'for WEP attacks only: change mac address to client\'s mac (if found)'
+	#wep: no-attack
+	if full:
+		print G+'  --no-arp\t'+GR+' disables arp-replay attack'
+		print G+'  --no-chop\t'+GR+' disables chop-chop attack'
+		print G+'  --no-frag\t'+GR+' disables fragmentation attack'
+		print G+'  --no-p0841\t'+GR+' disables -p0841 attack\n'
+	else:
+		print G+'  -noarp   '+GR+'disables arp-replay attack'
+		print G+'  -nochop  '+GR+'disables fragmentation attack'
+		print G+'  -nofrag  '+GR+'disables chop-chop attack'
+		print G+'  -no0841  '+GR+'disables -p0841 attack'
 	#NO COLORS
 	if full:
 		print G+'  --no-color\t '+GR+'do not display annoying colors (use system colors)\n'
 	else:
-		print G+'  -no-color\t'+GR+'do not use colored text (use system colors)'
+		print G+'  -nocolor '+GR+'do not use colored text (use system colors)'
 	
 	
 	print GR+'\n  FILTERS'
@@ -425,14 +566,14 @@ def halp(full=False):
 		#print '             \t being targeted and attacked. this is not recommended'
 		#print '             \t because most attacks are useless from far away!\n'
 	else:
-		print G+'  -e\t\t'+GR+'ssid (name) of the access point you want to attack'
+		print G+'  -e\t\t  '+GR+'ssid (name) of the access point you want to attack'
 	#ALL
 	if full:
 		print G+'  -all, --all\t'+GR+' target and attack all access points found'
 		print '           \t this is dangerous because most attacks require injection, and most'
 		print '           \t wireless cards cannot inject unless they are close to the router\n'
 	else:
-		print G+'  -all\t\t'+GR+'target and attack access points found'
+		print G+'  -all\t\t  '+GR+'target and attack access points found'
 	#POWER
 	if full:
 		print G+'  -p, --power\t'+GR+'     e.g. -p 55'
@@ -440,7 +581,7 @@ def halp(full=False):
 		print '             \t this is similar to the "-e all" option, except it filters'
 		print '             \t access points that are too far away for the attacks to be useful\n'
 	else:
-		print G+'  -p\t\t'+GR+'filters minimum power level (dB) to attack; ignores lower levels'
+		print G+'  -p\t\t  '+GR+'filters minimum power level (dB) to attack; ignores lower levels'
 	#CHANNEL
 	if full:
 		print G+'  -c, --channel\t'+GR+'     e.g. -c 6'
@@ -448,19 +589,19 @@ def halp(full=False):
 		print '               \t not using this option causes program to search all possible channels'
 		print '               \t only use -c or --channel if you know the channel you want to listen on\n'
 	else:
-		print G+'  -c\t\t'+GR+'channel to scan (default is all channels)'
+		print G+'  -c\t\t  '+GR+'channel to scan (default is all channels)'
 	#NOWPA
 	if full:
 		print G+'  --no-wpa\t'+GR+' ignores all WPA-encrypted networks'
 		print '          \t useful when using --power or "-e all" attacks\n'
 	else:
-		print G+'  -nowpa\t'+GR+'do NOT scan for WPA (default is on)'
+		print G+'  -nowpa\t  '+GR+'do NOT scan for WPA (default is on)'
 	#NOWEP
 	if full:
 		print G+'  --no-wep\t'+GR+' ignores all WEP-encrypted networks'
 		print '          \t useful when using filtered attacks like -p or "-e all"\n'
 	else:
-		print G+'  -nowep\t'+GR+'do NOT scan for WEP (default is on)'
+		print G+'  -nowep\t  '+GR+'do NOT scan for WEP (default is on)'
 	
 ############################################################################### find_mon	
 def find_mon():
@@ -631,7 +772,8 @@ def wpa_crack(index):
 			f = open('wpakey.txt','r')
 			cracked=f.readlines()[0]
 			print '\n'+GR+'['+sec2hms(time.time()-START_TIME)+'] '+G+'cracked "' + ssid + '"! the key is: "'+C+cracked+G+'"'
-			logit(datetime()+' cracked "' + ssid + '"! the key is "' + cracked + '"')
+			logit('cracked "' + ssid + '"! the key is "' + cracked + '"')
+			CRACKED += 1
 			
 		else:
 			print GR+'\n['+sec2hms(time.time()-START_TIME)+'] '+W+'wordlist crack complete; '+O+'WPA key for "' + ssid + '" was not found in the dictionary'
@@ -1007,9 +1149,9 @@ def attack_wep_all(index):
 						
 						# only print the ascii version to the log file if it does not contain non-printable characters
 						if to_ascii(pw).find('non-print') == -1:
-							logit(datetime()+' cracked WEP key for "'+TARGETS[index][8]+'", the key is: "'+pw+'", in ascii: "' + to_ascii(pw) +'"')
+							logit('cracked WEP key for "'+TARGETS[index][8]+'", the key is: "'+pw+'", in ascii: "' + to_ascii(pw) +'"')
 						else:
-							logit(datetime()+' cracked WEP key for "'+TARGETS[index][8]+'", the key is: "'+pw+'"')
+							logit('cracked WEP key for "'+TARGETS[index][8]+'", the key is: "'+pw+'"')
 						
 						break # break out of this method's while
 					
@@ -1139,13 +1281,9 @@ def attack_wep_all(index):
 								# remove the wep key output file, so we don't get a false-positive
 								subprocess.call(['rm','-rf','wepkey.txt'],stdout=open(os.devnull,'w'),stderr=open(os.devnull, 'w'))
 								time.sleep(0.1)
-								print 'ABOUT TO RUN AIRCRACK'
-								asdf=raw_input()
 								# start aircrack
 								cmd='aircrack-ng -a 1 -l wepkey.txt -f 2 wep-*.ivs'
 								proc_crack = subprocess.Popen(cmd,shell=True,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
-								print 'JUST RAN AIRCRACK'
-								asdf=raw_input()
 							stop_attack=False # do NOT stop the attack!
 							
 						elif typed=='n':
@@ -1187,6 +1325,13 @@ def attack_wep_all(index):
 		
 		# end of if statement (checks if we're using the current attack method)
 	# end of for-loop through every method
+	
+	if stop_attack == False:
+		# the attack stopped on it's own - ran out of time
+		if started_crack:
+			print GR+'[+] '+O+'attack unsuccessful!'+W+' unable to crack WEP key in time'
+		else:
+			print GR+'[+] '+O+'attack unsuccessful!'+W+' unable to generate enough IVS in time'
 	
 	# kill processes
 	try:
@@ -1376,7 +1521,7 @@ def attack_wpa(index):
 	global TARGETS, CLIENTS, IFACE, WPA_CRACK, SKIP_TO_WPA
 	TIME_START=time.time()
 	
-	# logit(datetime()+' started WPA handshake capture for "' + TARGETS[index][8] + '"')
+	# logit('started WPA handshake capture for "' + TARGETS[index][8] + '"')
 	try:
 		subprocess.call(['rm','-rf','wpa-01.cap','wpa-01.csv','wpa-01.kismet.csv','wpa-01.kismet.netxml'])
 		time.sleep(0.1)
@@ -1428,7 +1573,8 @@ def attack_wpa(index):
 				print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+ \
 						'] '+W+'sending 3 deauth packets; '+G+'handshake captured!'+W+' saved as "'+G+temp+'.cap'+W+'"'
 				sys.stdout.flush()
-				#logit(datetime()+' got handshake for "'+TARGETS[index][8]+'" stored handshake in "' + temp + '.cap"')
+				logit('got handshake for "'+TARGETS[index][8]+'" stored handshake in "' + temp + '.cap"')
+				HANDSHAKES += 1
 				
 				# add the filename and SSID to the list of 'to-crack' after everything's done
 				WPA_CRACK.append([temp+'.cap', TARGETS[index][8]])
@@ -1867,6 +2013,7 @@ def sec2hms(sec):
 	return result
 
 main()
+#update()
 
 # helpful diagram!
 # TARGETS list format

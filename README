@@ -85,7 +85,10 @@ there's other options to edit in wifite.py:
 these save you from typing the command-line equivalents everytime.
 
 
+
 BIG RED BUTTON MODE
+===================
+attempt to crack every nearby network:
 ./wifite.py -all
 
 
