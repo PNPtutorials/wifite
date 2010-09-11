@@ -17,6 +17,9 @@ import time                   # need to pause, track how long methods take
 import re                     # reg-ex: for replacing
 import urllib                 # needed for updating the script
 
+# current revision
+REVISION=6
+
 # default wireless interface (blank to prompt)
 IFACE=''
 
@@ -25,9 +28,6 @@ DICT=''
 
 # default essid to attack
 ESSID=''
-
-# current revision
-REVISION=4
 
 # WPA constants
 WPA=True
