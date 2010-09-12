@@ -9,6 +9,11 @@
     -test endless (WPA_MAXWAIT=0 or WEP_MAXWAIT=0)
     -test SKA (my router won't allow it, broken SKA everytime)
     -in WPA: scan for new clients, add to 'deauth' list, cycle through list
+	-when using -i, automatically select interface if in mon. mode, or to put in mon. mode
+"""
+
+""" ISSUES:
+	-no wpa handshake, takes too long to find SSIDS
 """
 
 import string, sys            # basic stuff
@@ -18,7 +23,7 @@ import re                     # reg-ex: for replacing
 import urllib                 # needed for updating the script
 
 # current revision
-REVISION=7
+REVISION=8
 
 # default wireless interface (blank to prompt)
 IFACE=''
@@ -231,17 +236,18 @@ def main():
 				pass
 		
 		if len(ATTACK) == 1:
-			print GR+'[+] '+W+'the attack is '+G+'complete'+W+';',
+			print GR+'[+] '+W+'attack is '+W+'complete'+W+';',
 		else:
-			print GR+'[+] '+W+'the attacks are '+G+'complete'+W+';',
+			print GR+'[+] '+W+'attacks are '+W+'complete'+W+';',
+		
 		
 		if len(THE_LOG) > 0:
 			print G+'session summary:'+W
 			for i in THE_LOG:
-				print i
+				print GR+'    -'+i
 			
 		else:
-			print R+'exiting'+W
+			print W+'the program will exit now'+W
 		
 	except KeyboardInterrupt:
 		print GR+'\n[!] '+O+'^C interrupt received, '+R+'exiting'+W
@@ -256,7 +262,7 @@ def banner():
 	print G+" .;'  ,;'             `;,  `;,   "+W+"WiFite r"+str(REVISION)
 	print G+".;'  ,;'  ,;'     `;,  `;,  `;,  "
 	print G+"::   ::   :   "+GR+"( )"+G+"   :   ::   ::  "+GR+"mass WEP/WPA cracker"
-	print G+"':.  ':.  ':. "+GR+"/ \\"+G+" ,:'  ,:'  ,:'  "
+	print G+"':.  ':.  ':. "+GR+"/_\\"+G+" ,:'  ,:'  ,:'  "
 	print G+" ':.  ':.    "+GR+"/___\\"+G+"    ,:'  ,:'   "+GR+"designed for backtrack4"
 	print G+"  ':.       "+GR+"/_____\\"+G+"      ,:'     "
 	print G+"           "+GR+"/       \\"+G+"             "
@@ -1519,7 +1525,7 @@ def attack_wpa(index):
 		sends deauth requests to the router (or a client, if found)
 		waits until a handshake it captured, the user hits ctrl+c, OR the timer goes past WPA_MAXWAIT
 	"""
-	global TARGETS, CLIENTS, IFACE, WPA_CRACK, SKIP_TO_WPA
+	global TARGETS, CLIENTS, IFACE, WPA_CRACK, SKIP_TO_WPA, HANDSHAKES
 	TIME_START=time.time()
 	
 	# logit('started WPA handshake capture for "' + TARGETS[index][8] + '"')
@@ -1590,7 +1596,7 @@ def attack_wpa(index):
 		
 		if got_handshake==False:
 			print R+'\n['+sec2hms(0)+'] unable to capture handshake in time (' + str(WPA_MAXWAIT) + ' sec)'
-		
+	
 	except KeyboardInterrupt:
 		# clean up
 		subprocess.call(['rm','-rf','wpa-01.cap','wpa-01.csv','wpa-01.kismet.csv','wpa-01.kismet.netxml'])
@@ -1602,7 +1608,9 @@ def attack_wpa(index):
 		except UnboundLocalError:
 			pass
 		
-		print R+'\n[+] ^C interrupt, '+O+'stopping capture attack on "' + TARGETS[index][8] + '"...'
+		print R+'\n['+get_time(WPA_MAXWAIT,TIME_START)+\
+				  '] '+R+'attack on "'+O+TARGETS[index][8]+R+'" interrupted'
+		
 		menu=''
 		opts=''
 		# check if there's other targets to attack
@@ -1721,7 +1729,7 @@ def gettargets():
 				if waiting==-1:
 					for x in xrange(0, len(TARGETS)):
 						if TARGETS[x][8].lower() == ESSID.lower():
-							print GR+'\n[+] '+W+'found "'+G+ESSID+W+'"! waiting '+G+'5 sec'+W+' for clients...',
+							print GR+'\n[+] '+W+'found "'+G+ESSID+W+'", waiting '+G+'5 sec'+W+' for clients...',
 							sys.stdout.flush()
 							ATTACK=[x+1]
 							waiting=0
@@ -1729,7 +1737,7 @@ def gettargets():
 				else:
 					for x in xrange(0, len(TARGETS)):
 						if TARGETS[x][8].lower() == ESSID.lower():
-							print GR+'\r[+] '+W+'found "'+G+ESSID+W+'"! waiting '+G+str(5-waiting)+' sec'+W+' for clients...',
+							print GR+'\r[+] '+W+'found "'+G+ESSID+W+'", waiting '+G+str(5-waiting)+' sec'+W+' for clients...',
 							waiting += 1
 							ATTACK=[x+1]
 							
