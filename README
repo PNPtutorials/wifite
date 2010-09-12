@@ -7,7 +7,6 @@ derv82 at gmail dot com
 ABOUT
 =============
 automates aircrack-ng suite to crack WEP/WPA encrypted network(s).
-
 ...one step closer to the "big red button"
 
 
@@ -53,7 +52,7 @@ throw that line into a script on the desktop and it's one click away!
 TIPS & TRICKS
 =============
 Ctrl+C options (during attacks):
-  if your WEP method isn't working,Ctrl+C gives options to move on
+  if your WEP method isn't working,Ctrl+C gives options to move on (buggy!)
   if you want to move onto cracking the next target
   if you want to skip targets and move onto WPA cracking
   if you want to stop and exit the program immediately
