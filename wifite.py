@@ -6,57 +6,63 @@
 """
 
 """ TODO LIST:
-    BUG: WEP doesn't keep cracking if ctrl+c is used to continue...
-    .
-    -test endless on wep WEP_MAXWAIT=0
     -test SKA (my router won't allow it, broken SKA everytime)
-    -when using -i, automatically select interface if in mon. mode, or to put in mon. mode
 """
 
-""" ISSUES:
-	-no wpa handshake, takes too long to find SSIDS
-"""
-
-import string, sys            # basic stuff
-import os, signal, subprocess # needed for shells, sending commands, etc
-import time                   # need to pause, track how long methods take
-import re                     # reg-ex: for replacing
-import urllib                 # needed for updating the script
+import string, sys # basic stuff
+import os, signal  # needed for shells, sending commands, etc
+import subprocess  # because os.call is deprecated and unreliable
+import time        # need to sleep; keep track how long methods take
+import re          # reg-ex: for replacing characters in strings
+import urllib      # needed for downloading webpages (updating the script)
 
 # current revision
-REVISION=10
+REVISION=11
 
 # default wireless interface (blank to prompt)
+# ex: wlan0, wlan1, rausb0
 IFACE=''
 
 # default wpa-cracking password list (blank to prompt)
+# NOTE: will default to 'wordlist.txt' if found in same directory as this script!
 DICT=''
 
-# default essid to attack
+# name of access point to attack (useful for targeting specific APs)
+# also, the 'power' is stored in ESSID. ex: ESSID='pow>55' would crack all APs above 55dB
 ESSID=''
 
-# WPA constants
-WPA=True
-WPA_TIMEOUT=3.0
-WPA_MAXWAIT=300 # change maxwait with -wpaw arg
+# WPA variables
+WPA=True        # True=search for WPA access points; False=do not search for WPA access points
+WPA_TIMEOUT=3.0 # how long to wait between deauthentications (in seconds)
+WPA_MAXWAIT=300 # longest time to wait for a handshake capture (in seconds)
+# you can temporarily change maxwait with -wpaw <time> where time is in minutes
 
 # WEP constants
-WEP=True
-WEP_PPS    =400
-WEP_MAXWAIT=600 # change maxwait with -wepw arg
-WEP_ARP    =True
-WEP_CHOP   =True
-WEP_FRAG   =True
-WEP_P0841  =True
-AUTOCRACK  =5000
-CHANGE_MAC =False
+WEP=True          # True=search for WEP access points; False=do not search for WEP access points
+WEP_PPS    =400   # packets per second (lower for APs that are farther away)
+WEP_MAXWAIT=600   # longest to wait for a WEP attack *METHOD* to finish (in seconds)
+                  # if wep_maxwait is 600, it gives 10minutes FOR EACH ATTACK METHOD (frag, chopchop, arp, p0841)
+                  # meaning a TOTAL of 40min per WEP access point (not including fake-authentication)
+                  # you can disable certain WEP attacks below to save time
+WEP_ARP    =True  # true=use arp-replay attack, false=don't use
+WEP_CHOP   =True  # use chop-chop attack
+WEP_FRAG   =True  # use fragmentation attack
+WEP_P0841  =True  # use -p 0841 replay attack
+AUTOCRACK  =10000 # begin cracking at 5000 IVS
+CHANGE_MAC =False # default is false because changing my mac causes attacks to NOT work on my router
+                  # set =True if you want to [temporarily] change the mac address of your wifi card
+				  # to the MAC of a client on the targeted network.
+
+# default channel to scan
+CHANNEL='0'  # 0 means attack all channels.
+# it's probably a good idea to leave this 0 and use "-c 6" if you want to target channel 6
+
+
 
 # keep track of how we're doing
-CRACKED   =0
-HANDSHAKES=0
+CRACKED   =0 # number of cracked networks
+HANDSHAKES=0 # number of handshakes we've captured (does not count 
 
-# default channel (0 checks all channels)
-CHANNEL='0'
 
 # assorted lists for storing data
 TARGETS  =[]
@@ -65,12 +71,14 @@ ATTACK   =[]
 WPA_CRACK=[]
 THE_LOG  =[]
 
+# flag for exiting out of attacks early, this should ALWAYS be false
 SKIP_TO_WPA=False
 
+# mac addresses, used for restoring mac addresses after changing them
 THIS_MAC=''
 OLD_MAC =''
 
-# COLORS
+# COLORS, because i think they're faaaaaabulous
 W  = "\033[0m";  # white (normal)
 BLA= "\033[30m"; # black
 R  = "\033[31m"; # red
@@ -111,15 +119,17 @@ def get_revision():
 	start= page.find(' href="detail?r='+str(irev)+'">', start + 3)
 	stop = page.find('</a>', start)
 	if start != -1 and stop != -1:
-		start += 19
+		start += 18 + len(str(irev))
 		desc=page[start:stop].strip()
 		desc=desc.replace("&#39;","'")
+		desc=desc.replace("&lt;","<")
+		desc=desc.replace("&gt;",">")
 	
 	# get the time last modified
 	start= page.find(' href="detail?r='+str(irev)+'">', start + 3)
 	stop = page.find('</a>', start)
 	if start != -1 and stop != -1:
-		start += 19
+		start += 18 + len(str(irev))
 		since=page[start:stop]
 	
 	return (irev, desc, since)
@@ -173,10 +183,16 @@ def upgrade():
 	sock = urllib.urlopen('http://wifite.googlecode.com/svn/trunk/wifite.py')
 	page = sock.read()
 	
+	if page == '':
+		print R+'[+] unable to download script; exiting'
+		sys.exit(0)
+	
+	# create/save the new script
 	f=open('wifite_new.py','w')
 	f.write(page)
 	f.close()
 	
+	# create/save a shell script that replaces this script with the new one
 	f=open('update_wifite.sh','w')
 	f.write('#!/bin/sh\n')
 	f.write('rm -rf wifite.py\n')
@@ -185,6 +201,8 @@ def upgrade():
 	f.write('chmod +x wifite.py\n')
 	#f.write('python','wifite.py','-h')
 	f.close()
+	
+	# change permissions on the script
 	subprocess.call(['chmod','+x','update_wifite.sh'])
 	
 	#print GR+'[+] '+G+'launching'+W+' new version...'
@@ -193,7 +211,7 @@ def upgrade():
 	
 	print GR+'[+] '+G+'updated!'+W+' type "./wifite.py" to run again'
 	sys.exit(0)
-	
+
 
 ############################################################################### main
 def main():
@@ -221,6 +239,10 @@ def main():
 		else:
 			print GR+'[+] '+W+'include '+G+'-help'+W+' for more options\n'
 			time.sleep(1)
+		
+		# check if 'wordlist.txt' is in this folder;
+		if DICT == '' and os.path.exists('wordlist.txt'):
+			DICT='wordlist.txt'
 		
 		# find/get wireless interface
 		find_mon()
@@ -1119,7 +1141,7 @@ def attack_wep_all(index):
 			TIME_START=time.time()
 			
 			print GR+'['+get_time(WEP_MAXWAIT,TIME_START)+ \
-				'] '+W+'started '+GR+wepname[wepnum]+W+' attack on "'+G+TARGETS[index][8]+W+'"'#; Ctrl+C for options'
+				'] '+W+'started '+GR+wepname[wepnum]+W+' attack on "'+G+TARGETS[index][8]+W+'"; '+GR+'Ctrl+C for options'
 			
 			# remove any .xor and replay files
 			subprocess.call('rm -rf replay_arp-*.cap *.xor',shell=True)
@@ -1624,7 +1646,7 @@ def attack_wpa(index):
 	if os.path.exists(temp+'.cap'):
 		# already have a handshake by this name...
 		print GR+'[+] '+W+'the file '+O+temp+'.cap'+W+' already exists! skipping handshake capture'
-		print GR+'[+] '+W+'to re-capture this handshake, delete "'+R+temp+'.cap'+W+'" and run again'
+		print GR+'[+] '+W+'to re-capture this handshake, delete "'+O+temp+'.cap'+W+'" and run again'
 		print R+ '[+] '+R+'aborting handshake capture'
 		
 		# add the handshake to the cracking list
