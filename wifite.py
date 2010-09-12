@@ -7,6 +7,7 @@
 
 """ TODO LIST:
     -test SKA (my router won't allow it, broken SKA everytime)
+	-GUI! BIG. RED. BUTTON. (use Tkinter module)
 """
 
 import string, sys # basic stuff
@@ -17,7 +18,7 @@ import re          # reg-ex: for replacing characters in strings
 import urllib      # needed for downloading webpages (updating the script)
 
 # current revision
-REVISION=11
+REVISION=12
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -25,6 +26,7 @@ IFACE=''
 
 # default wpa-cracking password list (blank to prompt)
 # NOTE: will default to 'wordlist.txt' if found in same directory as this script!
+# ex: /pentest/passwords/wordlists/darkc0de.lst
 DICT=''
 
 # name of access point to attack (useful for targeting specific APs)
@@ -51,7 +53,7 @@ WEP_P0841  =True  # use -p 0841 replay attack
 AUTOCRACK  =10000 # begin cracking at 5000 IVS
 CHANGE_MAC =False # default is false because changing my mac causes attacks to NOT work on my router
                   # set =True if you want to [temporarily] change the mac address of your wifi card
-				  # to the MAC of a client on the targeted network.
+                  # to the MAC of a client on the targeted network.
 
 # default channel to scan
 CHANNEL='0'  # 0 means attack all channels.
@@ -88,6 +90,8 @@ B  = "\033[34m"; # blue
 P  = "\033[35m"; # purple
 C  = "\033[36m"; # cyan
 GR = "\033[37m"; # gray
+
+
 
 ############################################################################### upgrade methods
 def get_revision():
@@ -344,11 +348,11 @@ def banner():
 	print G+"           "+GR+"/       \\"+G+"             "
 	print W
 
-
+############################################################################### check_root
 def check_root():
 	""" returns True if user is root, false otherwise """
 	if os.getenv('LOGNAME','none').lower() == 'root':
-			return True
+		return True
 	return False
 
 ############################################################################### handle args
@@ -372,7 +376,7 @@ def handle_args(args):
 			P  = ""
 			C  = ""
 			GR = ""
-			print '[+] colors have been neutralized :)'
+			print '[+] colors have been neutralized :)\n'
 			
 		#HELP
 		elif a == 'h' or a == 'help' or a == '-h':
@@ -410,7 +414,7 @@ def handle_args(args):
 				sys.exit(0)
 			i+=1
 			
-		elif a == '-e' or a == '--essid':
+		elif a == '-e' or a == '--essid' or a == '-essid':
 			try:
 				ESSID=args[i+1]
 				if ESSID.lower() == 'all' or ESSID.lower() == '"all"':
@@ -577,7 +581,7 @@ def halp(full=False):
 		print '             \t the program automatically selects a wifi device in monitor mode'
 		print '             \t prompts for input if no monitor-mode devices are found\n'
 	else:
-		print G+'  -i\t\t  '+GR+'wireless interface'
+		print G+'  -i\t   '+GR+'wireless interface'
 	#DICT
 	if full:
 		print G+'  -d, --dict\t'+GR+'     e.g. -d /pentest/passwords/wordlists/darkc0de.lst'
@@ -587,14 +591,14 @@ def halp(full=False):
 		print '             \t e.g. -d "none"'
 		print '             \t does not attempt to crack WPA handshakes, only captures and stores them\n'
 	else:
-		print G+'  -d\t\t  '+GR+'dictionary file, for WPA handshake cracking'
+		print G+'  -d\t   '+GR+'dictionary file, for WPA handshake cracking'
 	#WPAWAIT
 	if full:
 		print G+'  --wpa-wait\t'+GR+'     e.g. -wpaw 15'
 		print '          \t sets the maximum time to wait for a wpa handshake (in minutes)'
 		print '          \t enter "0" to wait endlessly\n'
 	else:
-		print G+'  -wpaw\t\t  '+GR+'time to wait for wpa handshake (in minutes)'
+		print G+'  -wpaw\t   '+GR+'time to wait for wpa handshake (in minutes)'
 	#WEPWAIT
 	if full:
 		print G+'  --wep-wait\t'+GR+'     e.g. -wepw 10'
@@ -604,7 +608,7 @@ def halp(full=False):
 		print '          \t if you have all 4 attacks (arp, frag, chop, 0841), it would take 40 minutes'
 		print '          \t enter "0" to wait endlessly\n'
 	else:
-		print G+'  -wepw\t\t  '+GR+'max time (in minutes) to capture/crack WEP key of each access point'
+		print G+'  -wepw\t   '+GR+'max time (in minutes) to capture/crack WEP key of each access point'
 	#PPS
 	if full:
 		print G+'  --pps\t\t\t'+GR+'     e.g. -pps 400'
@@ -612,14 +616,14 @@ def halp(full=False):
 		print '          \t however, smaller pps is recommended for weaker access points (or far-away APs)\n'
 		
 	else:
-		print G+'  -pps\t\t  '+GR+'packets-per-second (for WEP replay attacks)'
+		print G+'  -pps\t   '+GR+'packets-per-second (for WEP replay attacks)'
 	#CHANGE_MAC
 	if full:
 		print G+'  --change-mac\t'+GR+' chanes mac address of interface to a client\'s mac (if found)'
 		print '          \t only affects WEP-based attacks\n'
 		
 	else:
-		print G+'  -mac\t\t  '+GR+'for WEP attacks only: change mac address to client\'s mac (if found)'
+		print G+'  -mac\t   '+GR+'for WEP attacks only: change mac address to client\'s mac (if found)'
 	#wep: no-attack
 	if full:
 		print G+'  --no-arp\t'+GR+' disables arp-replay attack'
@@ -649,14 +653,14 @@ def halp(full=False):
 		#print '             \t being targeted and attacked. this is not recommended'
 		#print '             \t because most attacks are useless from far away!\n'
 	else:
-		print G+'  -e\t\t  '+GR+'ssid (name) of the access point you want to attack'
+		print G+'  -e\t   '+GR+'ssid (name) of the access point you want to attack'
 	#ALL
 	if full:
 		print G+'  -all, --all\t'+GR+' target and attack all access points found'
 		print '           \t this is dangerous because most attacks require injection, and most'
 		print '           \t wireless cards cannot inject unless they are close to the router\n'
 	else:
-		print G+'  -all\t\t  '+GR+'target and attack access points found'
+		print G+'  -all\t   '+GR+'target and attack access points found'
 	#POWER
 	if full:
 		print G+'  -p, --power\t'+GR+'     e.g. -p 55'
@@ -664,7 +668,7 @@ def halp(full=False):
 		print '             \t this is similar to the "-e all" option, except it filters'
 		print '             \t access points that are too far away for the attacks to be useful\n'
 	else:
-		print G+'  -p\t\t  '+GR+'filters minimum power level (dB) to attack; ignores lower levels'
+		print G+'  -p\t   '+GR+'filters minimum power level (dB) to attack; ignores lower levels'
 	#CHANNEL
 	if full:
 		print G+'  -c, --channel\t'+GR+'     e.g. -c 6'
@@ -672,19 +676,19 @@ def halp(full=False):
 		print '               \t not using this option causes program to search all possible channels'
 		print '               \t only use -c or --channel if you know the channel you want to listen on\n'
 	else:
-		print G+'  -c\t\t  '+GR+'channel to scan (default is all channels)'
+		print G+'  -c\t   '+GR+'channel to scan (default is all channels)'
 	#NOWPA
 	if full:
 		print G+'  --no-wpa\t'+GR+' ignores all WPA-encrypted networks'
 		print '          \t useful when using --power or "-e all" attacks\n'
 	else:
-		print G+'  -nowpa\t  '+GR+'do NOT scan for WPA (default is on)'
+		print G+'  -nowpa   '+GR+'do NOT scan for WPA (default is on)'
 	#NOWEP
 	if full:
 		print G+'  --no-wep\t'+GR+' ignores all WEP-encrypted networks'
 		print '          \t useful when using filtered attacks like -p or "-e all"\n'
 	else:
-		print G+'  -nowep\t  '+GR+'do NOT scan for WEP (default is on)'
+		print G+'  -nowep   '+GR+'do NOT scan for WEP (default is on)'
 	
 ############################################################################### find_mon	
 def find_mon():
@@ -2031,7 +2035,7 @@ def gettargets():
 		
 		print G+str(i+1) +W+'.',
 		
-		if tempdb >= 60:
+		if tempdb >= 55:
 			chcolor=G
 		elif tempdb >= 40:
 			chcolor=O
@@ -2040,15 +2044,16 @@ def gettargets():
 		
 		print chcolor+'"'+ TARGETS[i][8] +'"',
 		if len(TARGETS[i][8]) >= 25:
+			print '\t',
 			pass
 		elif len(TARGETS[i][8]) > 17:
-			print '\t',
-		elif len(TARGETS[i][8]) >= 9:
 			print '\t\t',
-		elif len(TARGETS[i][8].strip()) == 0:
-			print '\t\t\t\t',
-		else:
+		elif len(TARGETS[i][8]) >= 9:
 			print '\t\t\t',
+		elif len(TARGETS[i][8].strip()) == 0:
+			print '\t\t\t\t\t',
+		else:
+			print '\t\t\t\t',
 		print '(' + TARGETS[i][5] + 'dB ',
 		print TARGETS[i][2][:3] + ')',
 		
@@ -2195,7 +2200,9 @@ def sec2hms(sec):
 	
 	return result
 
-main()
+
+main() # launch the main method
+
 
 # helpful diagram!
 # TARGETS list format
