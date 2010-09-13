@@ -19,7 +19,7 @@ aircrack-ng suite:
 macchanger (only if CHANGE_MAC is set to True)
 various linux tools:
     echo, rm, cp, ls, killall,
-    ifconfig, iwconfig, wc
+    ifconfig, iwconfig, wc, xterm
 
 
 TESTED USING

