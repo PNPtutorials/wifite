@@ -16,9 +16,15 @@ import subprocess  # because os.call is deprecated and unreliable
 import time        # need to sleep; keep track how long methods take
 import re          # reg-ex: for replacing characters in strings
 import urllib      # needed for downloading webpages (updating the script)
+import tempfile    # for creating temporary directory
+ 
+# GUI imports
+from Tkinter import * # all of the gui modules we need
+import tkFileDialog   # for selecting the dictionary file
+import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=12
+REVISION=13
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -90,6 +96,285 @@ B  = "\033[34m"; # blue
 P  = "\033[35m"; # purple
 C  = "\033[36m"; # cyan
 GR = "\033[37m"; # gray
+
+# current file being run (hopefully wifite.py!)
+THEFILE=__file__
+if THEFILE.startswith('./'):
+	THEFILE=THEFILE[2:]
+
+# temporary directory, to keep those pesky cap files out of the way
+TEMPDIR=tempfile.mkdtemp(prefix='wifite')
+if not TEMPDIR.endswith('/'):
+	TEMPDIR += '/'
+
+# GUI needs a root for all children
+root = Tk()
+
+############################################################ GUI!
+class App:
+	""" class for creating the GUI
+		the GIU passes arguments to the script
+	"""
+	def __init__(self, master):
+		f0nt=('FreeSans',9,'bold')
+		frame = Frame(master, width=250, height=150)
+		frame.grid()
+		
+		r=0
+		w=Label(frame, font=f0nt, text='interface:')
+		w.grid(row=r, column=0, sticky='E')
+		self.iface = StringVar(frame)
+		lst=self.ifacelist()
+		self.iface.set(lst[0])
+		w=apply(OptionMenu, (frame, self.iface) + tuple(lst))
+		w.config(takefocus=1, width=25, font=f0nt)
+		w.grid(row=r,column=1,columnspan=2, sticky='W')
+		r+=1
+		
+		w=Label(frame, font=f0nt, text='encryption type:')
+		w.grid(row=r, column=0, sticky='E')
+		
+		self.enctype = StringVar(frame)
+		self.enctype.set('WEP and WPA')
+		w=OptionMenu(frame, self.enctype, 'WEP', 'WPA', 'WEP and WPA')
+		w.config(takefocus=1, width=10, font=f0nt)
+		w.grid(row=r,column=1, sticky='W')
+		
+		r+= 1
+		w=Label(frame, text='channel:', font=f0nt)
+		w.grid(row=r,column=0, sticky=E)
+		self.channel=Scale(frame, orient=HORIZONTAL, from_=1, to_=14, resolution=1, length=120, takefocus=1,\
+		 				troughcolor='black', sliderlength=30, sliderrelief=FLAT, relief=FLAT)
+		self.channel.grid(row=r, column=1, sticky='W')
+		self.channel.set(6)
+		self.channel.config(state=DISABLED, font=f0nt)
+		self.allchan=IntVar(frame)
+		self.allchan.set(1)
+		w=Checkbutton(frame, text='all channels', variable=self.allchan, command=self.click_channel, font=f0nt)
+		w.grid(row=r, column=2, sticky='W')
+		
+		r+= 1
+		w=Label(frame, text=' ', font=('',5,''))
+		w.grid(row=r,columnspan=3)
+		
+		r+= 1
+		w=Label(frame, text='minimum power:', font=f0nt)
+		w.grid(row=r,column=0, sticky='E')
+		self.power=Scale(frame, orient=HORIZONTAL, from_=1, to_=100, resolution=1, length=120, takefocus=1,\
+		 				troughcolor='black', sliderlength=20, relief=FLAT, sliderrelief=FLAT, font=f0nt)
+		self.power.grid(row=r, column=1, sticky='W')
+		self.power.set(55)
+		self.power.config(state=DISABLED)
+		self.all=IntVar(frame)
+		self.all.set(1)
+		w=Checkbutton(frame, text='everyone', variable=self.all, command=self.click_power, font=f0nt)
+		w.grid(row=r, column=2, sticky='W')
+		
+		r+= 1
+		w=Label(frame, text=' ', font=('',5,''))
+		w.grid(row=r,columnspan=3)
+		
+		r+= 1
+		w=Label(frame, text='dictionary:', font=f0nt)
+		w.grid(row=r, column=0, sticky='E')
+		self.dict=StringVar()
+		self.dicttxt=Entry(frame, font=f0nt, width=22, textvariable=self.dict)
+		self.dicttxt.grid(row=r, column=1, columnspan=2, sticky='W')
+		self.dicttxt.delete(0, END)
+		self.dicttxt.insert(0, '/pentest/passwords/wordlists/darkc0de.lst')
+		w=Button(frame, text="...", font=('FreeSans',7,''), height=0,command=self.lookup)
+		w.grid(row=r, column=2, sticky='E')
+		
+		r+= 1
+		w=Label(frame, text=' ', font=('',5,''))
+		w.grid(row=r,columnspan=3)
+		
+		r+=1
+		w=Label(frame, text='wep timeout (min):', font=f0nt)
+		w.grid(row=r,column=0)
+		self.wepw=StringVar(frame)
+		w=Entry(frame, justify=CENTER, width=3, textvariable=self.wepw, font=f0nt)
+		w.grid(row=r, column=1, sticky='W')
+		w.delete(0, END)
+		w.insert(0, '10')
+		self.wepwendless=IntVar(frame)
+		w=Checkbutton(frame, text='endless',variable=self.wepwendless, font=f0nt)
+		w.grid(row=r, column=1, sticky='E')
+		
+		r+=1
+		w=Label(frame, text='wpa timeout (min):', font=f0nt)
+		w.grid(row=r,column=0)
+		self.wpaw=StringVar(frame)
+		w=Entry(frame, justify=CENTER, width=3, textvariable=self.wpaw, font=f0nt)
+		w.grid(row=r, column=1, sticky='W')
+		w.delete(0, END)
+		w.insert(0, '5')
+		self.wpawendless=IntVar(frame)
+		w=Checkbutton(frame, text='endless',variable=self.wpawendless, font=f0nt)
+		w.grid(row=r, column=1, sticky='E')
+		
+		r+= 1
+		w=Label(frame, text=' ', font=('',5,''))
+		w.grid(row=r,columnspan=3)
+		
+		r += 1
+		w=Label(frame, text='wep options:', font=f0nt)
+		w.grid(row=r, column=0, sticky='W')
+		self.weparp=IntVar(value=1)
+		w=Checkbutton(frame, text='arp-replay', variable=self.weparp, font=f0nt)
+		w.grid(row=r, column=1, sticky='W')
+		self.wepchop=IntVar(value=1)
+		w=Checkbutton(frame, text='chop-chop', variable=self.wepchop, font=f0nt)
+		w.grid(row=r, column=2, sticky='W')
+		r=r+1
+		self.wepfrag=IntVar(value=1)
+		w=Checkbutton(frame, text='fragmentation', variable=self.wepfrag, font=f0nt)
+		w.grid(row=r, column=1, sticky='W')
+		self.wep0841=IntVar(value=1)
+		w=Checkbutton(frame, text='-p 0841', variable=self.wep0841, font=f0nt)
+		w.grid(row=r, column=2, sticky='W')
+		self.wepmac=IntVar(value=0)
+		w=Checkbutton(frame, text='change mac', variable=self.wepmac, font=f0nt)
+		w.grid(row=r,column=0, sticky='E')
+		
+		r=r+1
+		w=Label(frame, text='packets/sec:', font=f0nt)
+		w.grid(row=r, column=0)
+		self.weppps=Scale(frame, orient=HORIZONTAL, from_=100, to_=1500, resolution=50, length=190, font=f0nt)
+		self.weppps.grid(row=r, column=0, columnspan=3, sticky='E')
+		self.weppps.set(500)
+		
+		r+= 1
+		w=Label(frame, text=' ', font=('',5,''))
+		w.grid(row=r,columnspan=3)
+		
+		r += 1
+		w = Button(frame, text="HAXOR IT NAO", font=('FreeSans', 20, 'bold'), relief=FLAT, height=2,fg="white", bg="red", \
+				highlightbackground='red', highlightcolor='red', command=self.execute)
+		w.grid(row=r,columnspan=3)
+		
+		r+=1
+		w=Label(frame, text=' ', font=('',5,''))
+		w.grid(row=r,columnspan=3)
+		
+		sw = root.winfo_screenwidth()
+		sh = root.winfo_screenheight()
+		w=350
+		h=510
+		x = sw/2 - w/2
+		y = sh/2 - h/2
+		root.geometry("%dx%d+%d+%d" % (w,h,x,y))
+	
+	def click_channel(self):
+		if self.allchan.get() == 0:
+			self.channel.config(state=NORMAL, troughcolor='red')
+		else:
+			self.channel.config(state=DISABLED, troughcolor='black')
+	
+	def click_power(self):
+		if self.all.get() == 0:
+			self.power.config(state=NORMAL, troughcolor='red')
+		else:
+			self.power.config(state=DISABLED, troughcolor='black')
+	
+	def lookup(self):
+		file=tkFileDialog.askopenfile(parent=root, mode='rb',title='select a passwordlist')
+		if file != None:
+			self.dicttxt.delete(0, END)
+			self.dicttxt.insert(0, file.name)
+	
+	def ifacelist(self):
+		lst=[]
+		proc=subprocess.Popen(['airmon-ng'], stdout=subprocess.PIPE)
+		txt=proc.communicate()[0]
+		if txt == '':
+			return []
+		for line in txt.split('\n'):
+			if line != '' and line.find('Interface') == -1:
+				line = line.replace('\t',' ')
+				lst.append(line.strip())
+		return lst
+		
+	def execute(self):
+		global root
+		
+		cmd=[]
+		
+		# interface
+		temp=self.iface.get()
+		cmd.append('-i')
+		cmd.append(temp[:temp.find(' ')])
+		
+		# encryption
+		if self.enctype.get().startswith('WPA'):
+			cmd.append('-nowep')
+		elif self.enctype.get().startswith('WEP'):
+			cmd.append('-nowpa')
+		
+		# channel
+		if self.allchan.get() == 0:
+			cmd.append('-c')
+			cmd.append(str(self.channel.get()))
+		
+		# power
+		if self.all.get() != 0:
+			cmd.append('-all')
+		else:
+			cmd.append('-p')
+			cmd.append(str(self.power.get()))
+		
+		# dictionary
+		temp=self.dicttxt.get()
+		if os.path.exists(temp) and temp != '':
+			cmd.append('-d')
+			cmd.append(temp)
+		
+		# wep timeout
+		cmd.append('-wepw')
+		if self.wepwendless.get() == 1:
+			cmd.append('0')
+		else:
+			cmd.append(self.wepw.get())
+		
+		# wpa timeout
+		cmd.append('-wpaw')
+		if self.wpawendless.get() == 1:
+			cmd.append('0')
+		else:
+			cmd.append(self.wpaw.get())
+		
+		if self.weparp.get() != 1:
+			cmd.append('-noarp')
+		if self.wepchop.get() != 1:
+			cmd.append('-nochop')
+		if self.wepfrag.get() != 1:
+			cmd.append('-nofrag')
+		if self.wep0841.get() != 1:
+			cmd.append('-no0841')
+		
+		if self.wepmac.get() == 1:
+			cmd.append('-mac')
+		
+		cmd.append('-pps')
+		cmd.append(str(self.weppps.get()))
+		
+		t=threading.Thread(target=self.doit, args=(cmd,))
+		t.start()
+		root.destroy()
+		#print '[+] exiting...'
+	
+	def doit(self, args):
+		cmd=['xterm','-geom','100x30+0+0','-hold','-e','python',THEFILE]
+		for a in args:
+			cmd.append(a)
+		#print '[+] executing: ' + ' '.join(cmd)
+		subprocess.call(cmd)
+
+
+
+
+
+
 
 
 
@@ -199,11 +484,11 @@ def upgrade():
 	# create/save a shell script that replaces this script with the new one
 	f=open('update_wifite.sh','w')
 	f.write('#!/bin/sh\n')
-	f.write('rm -rf wifite.py\n')
-	f.write('mv wifite_new.py wifite.py\n')
+	f.write('rm -rf '+THEFILE+'\n')
+	f.write('mv wifite_new.py '+THEFILE+'\n')
 	f.write('rm -rf update_wifite.sh\n')
-	f.write('chmod +x wifite.py\n')
-	#f.write('python','wifite.py','-h')
+	f.write('chmod +x '+THEFILE+'\n')
+	#f.write('python',THEFILE,'-h')
 	f.close()
 	
 	# change permissions on the script
@@ -213,12 +498,13 @@ def upgrade():
 	
 	subprocess.call(['sh','update_wifite.sh'])
 	
-	print GR+'[+] '+G+'updated!'+W+' type "./wifite.py" to run again'
+	print GR+'[+] '+G+'updated!'+W+' type "./'+THEFILE+'" to run again'
 	sys.exit(0)
 
 
 ############################################################################### main
 def main():
+	global root
 	""" where the magic happens """
 	global IFACE, ATTACK, DICT, THIS_MAC, SKIP_TO_WPA, CRACKED, HANDSHAKES
 	
@@ -241,8 +527,17 @@ def main():
 			handle_args(sys.argv)
 			print ''
 		else:
-			print GR+'[+] '+W+'include '+G+'-help'+W+' for more options\n'
-			time.sleep(1)
+			# no arguments; run the GUI
+			root.title('WiFite GUI')
+			
+			print GR+'[+] '+W+'launching '+G+'gui interface'+W
+			app = App(root)
+			app
+			
+			root.mainloop()
+			#print GR+'[+] '+W+'include '+G+'-help'+W+' for more options\n'
+			#time.sleep(1)
+			sys.exit(0)
 		
 		# check if 'wordlist.txt' is in this folder;
 		if DICT == '' and os.path.exists('wordlist.txt'):
@@ -448,7 +743,7 @@ def handle_args(args):
 			except ValueError:
 				print R+'[!] invalid power level!'
 				print R+'[!] enter -e pow>## where ## is a 1 or 2 digit number'
-				print R+'[!] example: ./wifite.py -e pow>55'
+				print R+'[!] example: ./'+THEFILE+' -e pow>55'
 				print W
 				sys.exit(0)
 			
@@ -565,7 +860,7 @@ def halp(full=False):
 		if full=True, prints the full help (detailed info)
 	"""
 	
-	print GR+'Usage: '+W+'python wifite.py '+G+'[SETTINGS] [FILTERS]\n'
+	print GR+'Usage: '+W+'python '+THEFILE+' '+G+'[SETTINGS] [FILTERS]\n'
 	
 	if not full:
 		print G+'  -help    '+GR+'display the full help screen\n'
@@ -977,7 +1272,7 @@ def attack_wep_all(index):
 	# if there's no selected attacks, stop
 	if weps[0]==False and weps[1]==False and weps[2]==False and weps[3]==False:
 		print R+'[!] no wep attacks are selected; unable to attack!'
-		print R+'[!] edit wifite.py so these are equal to True: WEP_ARP, WEP_FRAG, WEP_CHOP, WEP_P0841'
+		print R+'[!] edit '+THEFILE+' so these are equal to True: WEP_ARP, WEP_FRAG, WEP_CHOP, WEP_P0841'
 		print W
 		return
 	
@@ -2203,6 +2498,9 @@ def sec2hms(sec):
 
 main() # launch the main method
 
+
+# remove the temp dir
+subprocess.call(['rm','-rf',TEMPDIR])
 
 # helpful diagram!
 # TARGETS list format
