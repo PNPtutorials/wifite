@@ -51,8 +51,9 @@ throw that line into a script on the desktop and it's one click away!
 
 TIPS & TRICKS
 =============
-i recommend moving or copying your favorite WPA dictionary to this dir.
-put wordlist.txt in the same directory as this script and wifite will
+i recommend moving or copying your favorite WPA dictionary to this dir as:
+wordlist.txt
+if 'wordlist.txt' is in the same directory as this script, wifite will
   use that list whenever it needs to crack a WPA...
  ... and it will never ask for you to enter a wordlist again!
 
@@ -62,6 +63,8 @@ to:
    DICT='/your/favorite/wordlist.txt'
 and the program will automatically use that wordlist instead of prompting.
 
+to avoid the whole matter, when using the GUI, enter 'none' as the dictionary
+no prompts will appear asking for a wordlist
 
 the -p (--power) option is to filter out APs that are too far away
 each wifi card is different, so it's up to you to find the power level
@@ -86,11 +89,7 @@ there's options you can edit in wifite.py (to save yourself some time):
 these save you from typing the command-line equivalents everytime.
 
 
-
-BIG RED BUTTON MODE
-===================
 attempt to crack every nearby network, using darkc0de's wordlist:
-
 ./wifite.py -all -d /pentest/passwords/wordlists/darkc0de.txt
 
 

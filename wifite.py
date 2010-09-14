@@ -7,6 +7,7 @@
 
 """ TODO LIST:
     -test SKA (my router won't allow it, broken SKA everytime)
+	-folder for handshakes... hands/, hshakes/ handsh8kz/ hs/ ?
 """
 
 import string, sys # basic stuff
@@ -23,7 +24,7 @@ import tkFileDialog   # for selecting the dictionary file
 import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=14
+REVISION=15
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -55,7 +56,7 @@ WEP_ARP    =True  # true=use arp-replay attack, false=don't use
 WEP_CHOP   =True  # use chop-chop attack
 WEP_FRAG   =True  # use fragmentation attack
 WEP_P0841  =True  # use -p 0841 replay attack
-AUTOCRACK  =10000 # begin cracking at 5000 IVS
+AUTOCRACK  =9000  # begin cracking when our IVS count is...  OVER9000!!!!!
 CHANGE_MAC =False # default is false because changing my mac causes attacks to NOT work on my router
                   # set =True if you want to [temporarily] change the mac address of your wifi card
                   # to the MAC of a client on the targeted network.
@@ -452,9 +453,11 @@ class App:
 		
 		# dictionary
 		temp=self.dicttxt.get()
-		if os.path.exists(temp) and temp != '':
-			cmd.append('-d')
+		cmd.append('-d')
+		if os.path.exists(temp) and temp != '' and temp != 'none':
 			cmd.append(temp)
+		else:
+			cmd.append('none')
 		
 		# wep timeout
 		cmd.append('-wepw')
@@ -494,7 +497,7 @@ class App:
 		t.start()
 		root.destroy()
 		#print '[+] exiting...'
-		sys.exit(0)
+		
 	
 	def doit(self, args):
 		cmd=['xterm','-T','WiFite','-geom','100x30+0+0','-hold','-e','python',THEFILE]
@@ -610,7 +613,7 @@ def upgrade():
 	
 	if page == '':
 		print R+'[+] unable to download script; exiting'
-		sys.exit(0)
+		return
 	
 	# create/save the new script
 	f=open('wifite_new.py','w')
@@ -635,7 +638,6 @@ def upgrade():
 	subprocess.call(['sh','update_wifite.sh'])
 	
 	print GR+'[+] '+G+'updated!'+W+' type "./'+THEFILE+'" to run again'
-	sys.exit(0)
 
 
 ############################################################################### main
@@ -656,7 +658,7 @@ def main():
 			print R+'[+] type '+O+'su'+R+' to login as root'
 			print R+'[+] the program will now exit'
 			print W
-			sys.exit(0)
+			return
 		
 		# handle arguments
 		if len(sys.argv) > 1:
@@ -675,7 +677,7 @@ def main():
 			root = None
 			#print GR+'[+] '+W+'include '+G+'-help'+W+' for more options\n'
 			#time.sleep(1)
-			sys.exit(0)
+			return
 		
 		# check if 'wordlist.txt' is in this folder;
 		if DICT == '' and os.path.exists('wordlist.txt'):
@@ -710,9 +712,12 @@ def main():
 			print '' # blank line to space things out
 			for i in xrange(0, len(WPA_CRACK)):
 				wpa_crack(i)
+				if WPA_CRACK[len(WPA_CRACK)-1] == ['','']:
+					WPA_CRACK.remove(['',''])
+					break
 		
 		# at this point, the attacks are complete.
-		
+		print W
 		# check if we tried to crack a WPA...
 		had_wpa=False
 		for x in ATTACK:
@@ -723,9 +728,9 @@ def main():
 		# these if statements are for colors and plural fixing.
 		# could've just done a one-liner, but this looks prettier
 		if len(ATTACK) == 1:
-			print GR+'[+] '+W+'attack is '+W+'complete'+W+';',
+			print GR+'[+] '+W+'attack is '+W+'complete'+W+':',
 		else:
-			print GR+'[+] '+W+'attacks are '+W+'complete'+W+';',
+			print GR+'[+] '+W+'attacks are '+W+'complete'+W+':',
 			if ATTEMPTS==1:
 				print O+'1 attempt,',
 			else:
@@ -733,12 +738,17 @@ def main():
 			
 		if had_wpa:
 			# only print handshakes if we cracked or targetted a WPA network
+			extra=''
+			temp=len(WPA_CRACK) - HANDSHAKES
+			if temp > 0:
+				extra=O+' ('+str(temp)+' pre-captured)'+W
+			
 			if HANDSHAKES==0:
-				print R+str(HANDSHAKES)+' handshakes'+W+',',
+				print R+str(HANDSHAKES)+' handshakes'+W+extra+',',
 			elif HANDSHAKES==1:
-				print G+'1 handshake'+W+',',
+				print G+'1 handshake'+W+extra+',',
 			else:
-				print G+str(HANDSHAKES)+' handshakes'+W+',',
+				print G+str(HANDSHAKES)+' handshakes'+W+extra+',',
 			
 			if DICT != '':
 				# only display amount cracked if user specified a dictionary
@@ -765,8 +775,6 @@ def main():
 	except KeyboardInterrupt:
 		print GR+'\n[!] '+O+'^C interrupt received, '+R+'exiting'+W
 	
-	subprocess.call(['rm','-rf',TEMPDIR])
-	subprocess.call('rm -rf /tmp/wifite*', shell=True)
 
 ############################################################################### banner
 def banner():
@@ -795,7 +803,7 @@ def handle_args(args):
 	""" handles arguments, sets global variables if specified """
 	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT
 	global W, BLA, R, G, O, B, P, C, GR # colors
-	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841 # wep attacks
+	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR # wep attacks
 	
 	# first loop, finds '-no-color' and '-help', in case the user wants to use these!
 	for a in args:
@@ -816,9 +824,11 @@ def handle_args(args):
 		#HELP
 		elif a == 'h' or a == 'help' or a == '-h':
 			halp()
+			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 		elif a == '--help' or a == '-help':
 			halp(True)
+			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 	
 	# second loop, for hte other options
@@ -834,6 +844,7 @@ def handle_args(args):
 				print R+'[!] error! invalid argument format'
 				print R+'[!] the program will now exit'
 				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			
 			i+=1
@@ -846,6 +857,7 @@ def handle_args(args):
 				print R+'[!] error! invalid argument format'
 				print R+'[!] the program will now exit'
 				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			i+=1
 			
@@ -862,6 +874,7 @@ def handle_args(args):
 				print R+'[!] error! invalid argument format'
 				print R+'[!] the program will now exit'
 				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			i+=1
 			
@@ -879,12 +892,14 @@ def handle_args(args):
 				print R+'[!] error! invalid argument format'
 				print R+'[!] the program will now exit'
 				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			except ValueError:
 				print R+'[!] invalid power level!'
 				print R+'[!] enter -e pow>## where ## is a 1 or 2 digit number'
 				print R+'[!] example: ./'+THEFILE+' -e pow>55'
 				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			
 			print GR+'[+] '+W+'targeting networks with signal power greater than '+G+ str(tempint)+'dB'+W
@@ -898,6 +913,7 @@ def handle_args(args):
 				print R+'[!] error! invalid argument format'
 				print R+'[!] the program will now exit'
 				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			i+=1
 			
@@ -922,6 +938,7 @@ def handle_args(args):
 				print R+'[!] error! invalid arguments'
 				print R+'[!] the program will now exit'
 				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			i=i+1
 			
@@ -937,6 +954,7 @@ def handle_args(args):
 				print R+'[!] error! invalid arguments'
 				print R+'[!] the program will now exit'
 				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			i=i+1
 		
@@ -948,6 +966,7 @@ def handle_args(args):
 				print R+'[!] error! invalid arguments'
 				print R+'[!] the program will now exit'
 				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			i=i+1
 		
@@ -974,6 +993,7 @@ def handle_args(args):
 		elif a == '-update' or a == '--update' or a == '-upgrade' or a == '--upgrade':
 			# upgrayedd
 			update()
+			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 		
 		elif a == '-console' or a == '--console':
@@ -986,6 +1006,7 @@ def handle_args(args):
 		print R+'[!] those are the only two kinds of networks this program can attack'
 		print R+'[!] program will exit now'
 		print W
+		subprocess.call(['rm','-rf',TEMPDIR])
 		sys.exit(0)
 
 ############################################################################### logit
@@ -1027,6 +1048,7 @@ def halp(full=False):
 		print '             \t dictionary file for WPA cracking'
 		print '             \t the program will prompt for a dictionary file if any WPA targets'
 		print '             \t are selected for attack. using -d avoids this prompt'
+		print '             \t wifite will use "wordlist.txt" if found in same directory as this script'
 		print '             \t e.g. -d "none"'
 		print '             \t does not attempt to crack WPA handshakes, only captures and stores them\n'
 	else:
@@ -1137,7 +1159,7 @@ def find_mon():
 	if only one monitor-mode device is found, it is used
 	if multiple monitor-mode devices are found, it asks to pick one
 	"""
-	global IFACE
+	global IFACE, TEMPDIR
 	
 	ifaces=[]
 	print GR+'[+] '+W+'searching for devices in monitor mode...'
@@ -1168,6 +1190,7 @@ def find_mon():
 			print R+'[!] perhaps you need to install new drivers'
 			print R+'[+] this program will now exit.'
 			print W
+			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 		elif len(poss) == 1 and IFACE != '' and poss[0].lower() == IFACE.lower():
 			print GR+'[+] '+W+'putting "'+G + poss[0] + W+'" into monitor mode...'
@@ -1244,7 +1267,7 @@ def wpa_crack(index):
 		i don't have a way to get the # of tries per second or total, so it just outputs "cracking" every 5 seconds
 		maybe it could do something else...
 	"""
-	global DICT, WPA_CRACK
+	global DICT, WPA_CRACK, TEMPDIR
 	
 	filename=WPA_CRACK[index][0]
 	ssid    =WPA_CRACK[index][1]
@@ -1327,7 +1350,18 @@ def wpa_crack(index):
 		print R+'\n['+sec2hms(time.time()-START_TIME)+'] '+O+'cracking interrupted\n'+W
 		# check if there's other files to crack (i < len(WPA_CRACK))
 		# if there are, ask if they want to start cracking the next handshake, or exit
-		
+		if index != len(WPA_CRACK) - 1:
+			# there are more handshakes to crack! prompt a menu...
+			menu= G+'   [c]ontinue cracking other handshakes ('+str(len(WPA_CRACK)-index-1)+' remaining)\n'
+			menu+=R+'   [e]xit the program completely'
+			
+			print GR+'\n[+] '+W+'please select a menu option below:'
+			print menu
+			print GR+'[+] '+W+'enter option ('+G+'c'+W+' or '+R+'e'+W+'):',
+			typed=raw_input()
+			if typed == 'e':
+				WPA_CRACK.append(['',''])
+	
 	try:
 		os.kill(proc_crack.pid, signal.SIGTERM)
 	except OSError:
@@ -1346,6 +1380,7 @@ def dict_check():
 		if not, it checks the current ATTACK list for any targets that may be WPA
 		if it finds any WPA, it immediately prompts the user for a dictionary
 		user has the option to ctrl+C or type 'none' to avoid cracking
+		if DICT is 'none', then reset DICT to '' and move on
 	"""
 	global DICT, ATTACK, TARGETS
 	if DICT == '':
@@ -1371,7 +1406,9 @@ def dict_check():
 				#	print GR+'\n[+] '+W+'no dictionary file entered; continuing anyway'
 					
 				break
-
+	elif DICT == 'none':
+		DICT=''
+	
 ############################################################################### attack
 def attack(index):
 	""" checks if target is WPA or WEP, forwards to the proper method """
@@ -1403,7 +1440,7 @@ def attack_wep_all(index):
 	""" attacks target using all wep attack methods """
 	global TARGETS, CLIENTS, IFACE, WEP_MAXWAIT, WEP_PPS
 	global THIS_MAC, WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841
-	global AUTOCRACK, CRACKED, OLD_MAC
+	global AUTOCRACK, CRACKED, OLD_MAC, TEMPDIR
 	global SKIP_TO_WPA, WPA_CRACK # to exit early
 	
 	# to keep track of how long we are taking
@@ -2000,7 +2037,7 @@ def attack_fakeauth(index):
 		  if there's no ska but we couldn't fake-auth.. deauth and return False...
 		   -might make clients show up for dynamic-client-search later on
 	"""
-	global TARGETS, IFACE, THIS_MAC, WEP_MAXWAIT
+	global TARGETS, IFACE, THIS_MAC, WEP_MAXWAIT, TEMPDIR
 	
 	if WEP_MAXWAIT != 0:
 		# if maxwait is not null (not endless)
@@ -2095,19 +2132,19 @@ def attack_wpa(index):
 		 -cycles between attacking each client indivdiually, and every client (broadcast)
 		waits until a handshake it captured, the user hits ctrl+c, OR the timer goes past WPA_MAXWAIT
 	"""
-	global TARGETS, CLIENTS, IFACE, WPA_CRACK, SKIP_TO_WPA, HANDSHAKES
+	global TARGETS, CLIENTS, IFACE, WPA_CRACK, SKIP_TO_WPA, HANDSHAKES, TEMPDIR
 	
 	# check if we already have a handshake for this SSID...
 	temp=TARGETS[index][8].strip()
 	temp=re.sub(r'[^a-zA-Z0-9]','',temp)
-	if os.path.exists(temp+'.cap'):
+	if os.path.exists('hs/'+temp+'.cap'):
 		# already have a handshake by this name...
-		print GR+'[+] '+W+'the file '+O+temp+'.cap'+W+' already exists! skipping handshake capture'
+		print GR+'[+] '+R+'capture aborted '+W+'because the file '+O+temp+'.cap'+G+' already exists!'
 		print GR+'[+] '+W+'to re-capture this handshake, delete "'+O+temp+'.cap'+W+'" and run again'
-		print R+ '[+] '+R+'aborting handshake capture'
+		#print R+ '[+] '+R+'aborting handshake capture'
 		
 		# add the handshake to the cracking list
-		WPA_CRACK.append([temp+'.cap', TARGETS[index][8]])
+		WPA_CRACK.append(['hs/'+temp+'.cap', TARGETS[index][8]])
 		return
 	
 	TIME_START=time.time()
@@ -2170,17 +2207,20 @@ def attack_wpa(index):
 				# check if the file already exists...
 				temp2=''
 				temp3=1
-				while os.path.exists(temp+temp2+'.cap'):
+				while os.path.exists('hs/'+temp+temp2+'.cap'):
 					temp2='-'+str(temp3)
 					temp3+=1
-				temp=temp+temp2
+				temp='hs/'+temp+temp2
+				
+				subprocess.call(['mkdir','hs/'],stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
 				
 				# copy the cap file for safe-keeping
-				subprocess.call(['cp',TEMPDIR+'wpa-01.cap',temp + '.cap'])
+				subprocess.call(['cp',TEMPDIR+'wpa-01.cap', temp+'.cap'])
 				
 				print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+ \
 						'] '+W+'sent 3 deauth packets; '+G+'handshake captured!'+W+' saved as "'+G+temp+'.cap'+W+'"'
 				sys.stdout.flush()
+				
 				#logit('got handshake for "'+TARGETS[index][8]+'" stored handshake in "' + temp + '.cap"')
 				HANDSHAKES += 1
 				
@@ -2282,6 +2322,7 @@ def attack_wpa(index):
 				return
 			else:
 				#print GR+'[+] '+R+'exiting'
+				#subprocess.call(['rm','-rf',TEMPDIR])
 				#sys.exit(0)
 				
 				WPA_CRACK=[] # clear the wpa crack list
@@ -2324,7 +2365,8 @@ def gettargets():
 		displays the results to the user, asks for which targets to attack
 		adds targets to ATTACK list and returns
 	"""
-	global IFACE, CHANNEL, TARGETS, CLIENTS, ATTACK, ESSID
+	global IFACE, CHANNEL, TARGETS, CLIENTS, ATTACK, ESSID, TEMPDIR
+	
 	TIME_START = time.time()
 	waiting = -1
 	
@@ -2460,6 +2502,7 @@ def gettargets():
 			print R+'[+] there are no targets with a power level greater than '+O + str(power) + 'dB'
 			print R+'[+] try selecting a '+O+'lower power threshold'
 			print W
+			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 		
 		print GR+'[+] '+G+str(len(ATTACK))+W+' access points targeted for attack'
@@ -2478,6 +2521,7 @@ def gettargets():
 		print R+'[!] no targets found! make sure that '+O+'airodump-ng'+R+' is working properly'
 		print R+'[!] the program will now exit'
 		print W
+		subprocess.call(['rm','-rf',TEMPDIR])
 		sys.exit(0)
 	
 	print GR+'[+] '+W+'select the '+G+'number(s)'+W+' of the target(s) you want to attack:'
@@ -2534,7 +2578,8 @@ def gettargets():
 
 def parsetargets():
 	"""reads through 'wifite-01.csv' and adds any valid targets to the global list TARGETS """
-	global TARGETS, CLIENTS, WEP, WPA
+	global TARGETS, CLIENTS, WEP, WPA, TEMPDIR
+	
 	TARGETS=[]
 	CLIENTS={}
 	try:
@@ -2586,6 +2631,7 @@ def parsetargets():
 		print R+'[+] please make sure you have properly enabled your device in monitor mode'
 		print R+'[+] the program is unable to continue and will now exit'
 		print W
+		subprocess.call(['rm','-rf',TEMPDIR])
 		sys.exit(0)
 	
 	# sort the targets by power
@@ -2660,6 +2706,10 @@ def sec2hms(sec):
 
 
 main() # launch the main method
+subprocess.call(['rm','-rf',TEMPDIR])
+subprocess.call('rm -rf /tmp/wifite*', shell=True, stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
+
+#subprocess.call('rm -rf /tmp/wifite*/', shell=True)
 
 # helpful diagram!
 # TARGETS list format
