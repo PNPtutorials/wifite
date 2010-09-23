@@ -24,7 +24,7 @@ import tkFileDialog   # for selecting the dictionary file
 import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=16
+REVISION=17
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2625,7 +2625,7 @@ def parsetargets():
 						temp[7] = temp[7].strip()
 						if int(temp[5]) < 0:
 							temp[5] = str(int(temp[5]) + 100)
-						if int(temp[7]) == len(temp[8]):
+						if int(temp[7]) == len(temp[8]) and int(temp[7]) != 0:
 							TARGETS.append(temp)
 				
 			elif line.find('Station MAC') == -1 and clients == True:
