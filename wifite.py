@@ -7,7 +7,7 @@
 
 """ TODO LIST:
     -test SKA (my router won't allow it, broken SKA everytime)
-	-folder for handshakes... hands/, hshakes/ handsh8kz/ hs/ ?
+    -folder for handshakes... hands/, hshakes/ handsh8kz/ hs/ ?
 """
 
 import string, sys # basic stuff
@@ -24,7 +24,7 @@ import tkFileDialog   # for selecting the dictionary file
 import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=15
+REVISION=16
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -1267,7 +1267,7 @@ def wpa_crack(index):
 		i don't have a way to get the # of tries per second or total, so it just outputs "cracking" every 5 seconds
 		maybe it could do something else...
 	"""
-	global DICT, WPA_CRACK, TEMPDIR
+	global DICT, WPA_CRACK, TEMPDIR, CRACKED
 	
 	filename=WPA_CRACK[index][0]
 	ssid    =WPA_CRACK[index][1]
@@ -2213,6 +2213,16 @@ def attack_wpa(index):
 				temp='hs/'+temp+temp2
 				
 				subprocess.call(['mkdir','hs/'],stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
+				
+				time.sleep(1.0)
+				# kill the processes
+				try:
+					os.kill(proc_read.pid, signal.SIGTERM)
+					os.kill(proc_deauth.pid, signal.SIGTERM)
+				except OSError:
+					pass
+				except UnboundLocalError:
+					pass
 				
 				# copy the cap file for safe-keeping
 				subprocess.call(['cp',TEMPDIR+'wpa-01.cap', temp+'.cap'])
