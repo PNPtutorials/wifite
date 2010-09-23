@@ -24,7 +24,7 @@ import tkFileDialog   # for selecting the dictionary file
 import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=17
+REVISION=18
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -434,9 +434,10 @@ class App:
 		cmd.append(temp[:temp.find(' ')])
 		
 		# encryption
-		if self.enctype.get().startswith('WPA'):
+		print "ENCTYPE='"+self.enctype.get()+"'"
+		if self.enctype.get() == 'WPA':
 			cmd.append('-nowep')
-		elif self.enctype.get().startswith('WEP'):
+		elif self.enctype.get() == 'WEP':
 			cmd.append('-nowpa')
 		
 		# channel
