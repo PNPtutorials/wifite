@@ -1,6 +1,5 @@
 #!/usr/bin/python
 
-
 """ WIFITE
     (c) 2010 derv merkler
 """
@@ -17,14 +16,14 @@ import time        # need to sleep; keep track how long methods take
 import re          # reg-ex: for replacing characters in strings
 import urllib      # needed for downloading webpages (updating the script)
 import tempfile    # for creating temporary directory
- 
+
 # GUI imports
 from Tkinter import * # all of the gui modules we need
 import tkFileDialog   # for selecting the dictionary file
 import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=18
+REVISION=19
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -60,6 +59,7 @@ AUTOCRACK  =9000  # begin cracking when our IVS count is...  OVER9000!!!!!
 CHANGE_MAC =False # default is false because changing my mac causes attacks to NOT work on my router
                   # set =True if you want to [temporarily] change the mac address of your wifi card
                   # to the MAC of a client on the targeted network.
+EXIT_IF_NO_FAKEAUTH=False # during a WEP attack, if fake-authentication fails, the attack is cancelled
 
 # default channel to scan
 CHANNEL='0'  # 0 means attack all channels.
@@ -141,6 +141,7 @@ class App:
 		setfrag   =1
 		setp0841  =1
 		setmac    =0
+		setauth   =0
 		try:
 			f=open('.wifite.conf','r')
 			txt=f.read()
@@ -197,6 +198,8 @@ class App:
 					setp0841=0
 				elif l == '-mac':
 					setmac=1
+				elif l == '-f':
+					setauth=1
 					
 		except IOError:
 			pass
@@ -326,9 +329,13 @@ class App:
 		self.wep0841=IntVar(value=setp0841)
 		w=Checkbutton(frame, text='-p 0841', variable=self.wep0841, font=f0nt, activeforeground='red')
 		w.grid(row=r, column=2, sticky='W')
+		r=r+1
 		self.wepmac=IntVar(value=setmac)
 		w=Checkbutton(frame, text='change mac', variable=self.wepmac, font=f0nt, activeforeground='red')
-		w.grid(row=r,column=0, sticky='E')
+		w.grid(row=r,column=1, sticky='W')
+		self.wepauth=IntVar(value=setauth)
+		w=Checkbutton(frame, text='force auth', variable=self.wepauth, font=f0nt, activeforeground='red')
+		w.grid(row=r,column=2, sticky='W')
 		
 		r=r+1
 		w=Label(frame, text='packets/sec:', font=f0nt)
@@ -434,7 +441,6 @@ class App:
 		cmd.append(temp[:temp.find(' ')])
 		
 		# encryption
-		print "ENCTYPE='"+self.enctype.get()+"'"
 		if self.enctype.get() == 'WPA':
 			cmd.append('-nowep')
 		elif self.enctype.get() == 'WEP':
@@ -486,6 +492,9 @@ class App:
 		if self.wepmac.get() == 1:
 			cmd.append('-mac')
 		
+		if self.wepauth.get() == 1:
+			cmd.append('-f')
+		
 		cmd.append('-pps')
 		cmd.append(str(self.weppps.get()))
 		
@@ -501,7 +510,7 @@ class App:
 		
 	
 	def doit(self, args):
-		cmd=['xterm','-T','WiFite','-geom','100x30+0+0','-hold','-e','python',THEFILE]
+		cmd=['xterm','-bg','black','-fg','white','-T','WiFite','-geom','100x30+0+0','-hold','-e','python',THEFILE]
 		for a in args:
 			cmd.append(a)
 		print GR+'[+] '+G+'executing: '+W+ './' + THEFILE+' ' + ' '.join(args)
@@ -804,7 +813,7 @@ def handle_args(args):
 	""" handles arguments, sets global variables if specified """
 	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT
 	global W, BLA, R, G, O, B, P, C, GR # colors
-	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR # wep attacks
+	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR, EXIT_IF_NO_FAKEAUTH # wep attacks
 	
 	# first loop, finds '-no-color' and '-help', in case the user wants to use these!
 	for a in args:
@@ -1000,6 +1009,10 @@ def handle_args(args):
 		elif a == '-console' or a == '--console':
 			print GR+'[+] '+G+'console mode'+W+' activated'
 		
+		elif a == '-f' or a == '--force-auth':
+			print GR+'[+] '+W+'continue WEP attack despite fake-auth failure '+O+'disabled'+W+''
+			EXIT_IF_NO_FAKEAUTH=True
+			
 		i += 1
 		
 	if WEP==False and WPA==False:
@@ -1097,6 +1110,11 @@ def halp(full=False):
 		print G+'  -nochop  '+GR+'disables fragmentation attack'
 		print G+'  -nofrag  '+GR+'disables chop-chop attack'
 		print G+'  -no0841  '+GR+'disables -p0841 attack'
+	#WEP FORCE FAKE-AUTH (cancels attack if failed)
+	if full:
+		print G+'  --force-auth\t '+GR+'during WEP attack, if fake-authentication fails, the attack ends\n'
+	else:
+		print G+'  -f       '+GR+'WEP attacks end if fake-authentication with the router fails'
 	#NO COLORS
 	if full:
 		print G+'  --no-color\t '+GR+'do not display annoying colors (use system colors)\n'
@@ -1281,8 +1299,8 @@ def wpa_crack(index):
 	if txt != None:
 		txt=txt.strip().split(' ')[0]
 		if txt != '':
-			total_pmks=int(txt.strip())
-			print 'using '+G+DICT+W+' ('+G + txt +' passwords'+W+')'
+			total_pmks=int(txt.strip())+1
+			print 'using '+G+DICT+W+' ('+G + str(total_pmks) +' passwords'+W+')'
 	else:
 		total_pmks=0
 		print ''
@@ -1336,12 +1354,12 @@ def wpa_crack(index):
 			
 			# wipe the aircrack output file (keep it from getting too big)
 			subprocess.call('echo "" > '+TEMPDIR+'crackout.tmp',shell=True)
-			
+		
 		if os.path.exists(TEMPDIR+'wpakey.txt'):
 			f = open(TEMPDIR+'wpakey.txt','r')
 			cracked=f.readlines()[0]
 			print '\n'+GR+'['+sec2hms(time.time()-START_TIME)+'] '+G+'cracked "' + ssid + '"! the key is: "'+C+cracked+G+'"'
-			logit('cracked "' + ssid + '"! the key is "' + cracked + '"')
+			logit('cracked WPA key for "' + ssid + '", the key is: "' + cracked + '"')
 			CRACKED += 1
 			
 		else:
@@ -1441,7 +1459,7 @@ def attack_wep_all(index):
 	""" attacks target using all wep attack methods """
 	global TARGETS, CLIENTS, IFACE, WEP_MAXWAIT, WEP_PPS
 	global THIS_MAC, WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841
-	global AUTOCRACK, CRACKED, OLD_MAC, TEMPDIR
+	global AUTOCRACK, CRACKED, OLD_MAC, TEMPDIR, EXIT_IF_NO_FAKEAUTH
 	global SKIP_TO_WPA, WPA_CRACK # to exit early
 	
 	# to keep track of how long we are taking
@@ -1505,6 +1523,18 @@ def attack_wep_all(index):
 			else:
 				# fake auth was unsuccessful (SKA?)
 				print GR+'\n['+get_time(WEP_MAXWAIT, TIME_START)+'] '+R+'fake authentication unsuccessful :('
+				if EXIT_IF_NO_FAKEAUTH:
+					print GR+'['+get_time(WEP_MAXWAIT, TIME_START)+'] '+R+'exiting attack...'
+					# kill airodump
+					try:
+						os.kill(proc_read.pid, signal.SIGTERM)   # airodump-ng
+					except OSError:
+						pass
+					except UnboundLocalError:
+						pass
+					subprocess.call(['killall','airodump-ng'], stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
+					return
+				
 		else:
 			# if we have a client and it's not SKA, we can just change our MAC
 			
