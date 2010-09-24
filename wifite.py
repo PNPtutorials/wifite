@@ -23,7 +23,7 @@ import tkFileDialog   # for selecting the dictionary file
 import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=19
+REVISION=20
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2615,7 +2615,7 @@ def gettargets():
 	if len(ATTACK) > 0:
 		for x in ATTACK:
 			print GR+'[+] '+W+'adding "'+G + TARGETS[x-1][8] + W+'" to the attack list'+W
-		
+
 
 def parsetargets():
 	"""reads through 'wifite-01.csv' and adds any valid targets to the global list TARGETS """
@@ -2656,7 +2656,7 @@ def parsetargets():
 						temp[7] = temp[7].strip()
 						if int(temp[5]) < 0:
 							temp[5] = str(int(temp[5]) + 100)
-						if int(temp[7]) == len(temp[8]) and int(temp[7]) != 0:
+						if int(temp[7]) == len(temp[8]) and temp[8] != '' and temp[8] != ( chr(0) * len(temp[8])):
 							TARGETS.append(temp)
 				
 			elif line.find('Station MAC') == -1 and clients == True:
@@ -2744,7 +2744,6 @@ def sec2hms(sec):
 	result += str(s)
 	
 	return result
-
 
 main() # launch the main method
 subprocess.call(['rm','-rf',TEMPDIR])
