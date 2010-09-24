@@ -23,7 +23,7 @@ import tkFileDialog   # for selecting the dictionary file
 import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=23
+REVISION=24
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -117,14 +117,15 @@ if not TEMPDIR.endswith('/'):
 
 
 
-
+NO_XSERVER=False
 try:
 	# GUI needs a root for all children
 	root = Tk()
 	root.withdraw()  # hide main window until we're ready
 	# there was a glitch where a window 'Tk' would appear on ctrl+c.. this fixed it!
 except tkinter.TclError:
-	print 'tkinter error'
+	NO_XSERVER=True
+	print R+'[!] error loading tkinter; '+O+'disabling GUI...'
 
 
 
@@ -663,7 +664,7 @@ def upgrade():
 def main():
 	global root
 	""" where the magic happens """
-	global IFACE, ATTACK, DICT, THIS_MAC, SKIP_TO_WPA, CRACKED, HANDSHAKES
+	global IFACE, ATTACK, DICT, THIS_MAC, SKIP_TO_WPA, CRACKED, HANDSHAKES, NO_XSERVER
 	
 	ATTEMPTS=0
 	
@@ -683,7 +684,7 @@ def main():
 		if len(sys.argv) > 1:
 			handle_args(sys.argv)
 			print ''
-		else:
+		elif not NO_XSERVER:
 			# no arguments; run the GUI
 			root.title('WiFite GUI')
 			
