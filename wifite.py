@@ -23,7 +23,7 @@ import tkFileDialog   # for selecting the dictionary file
 import threading      # so the GUI doesn't lock up
 
 # current revision
-REVISION=22
+REVISION=23
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -118,11 +118,13 @@ if not TEMPDIR.endswith('/'):
 
 
 
-
-# GUI needs a root for all children
-root = Tk()
-root.withdraw()  # hide main window until we're ready
-# there was a glitch where a window 'Tk' would appear on ctrl+c.. this fixed it!
+try:
+	# GUI needs a root for all children
+	root = Tk()
+	root.withdraw()  # hide main window until we're ready
+	# there was a glitch where a window 'Tk' would appear on ctrl+c.. this fixed it!
+except tkinter.TclError:
+	print 'tkinter error'
 
 
 
@@ -1470,7 +1472,7 @@ def attack(index):
 	print GR+'\n[+] '+W+'attacking "'+G + TARGETS[index][8] + W+'"...'
 	if TARGETS[index][2].startswith('WPA'):
 		attack_wpa(index)
-	elif TARGETS[index][2] == 'WEP':
+	elif TARGETS[index][2].startswith('WEP'):
 		attack_wep_all(index)
 	else:
 		print R+'\n[!] unknown encryption type: '+O + TARGETS[index][2] + R+'\n'
