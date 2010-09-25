@@ -27,7 +27,7 @@ except ImportError:
 	print R+'[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=25
+REVISION=26
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -1399,6 +1399,9 @@ def wpa_crack(index):
 		
 		cmd = 'aircrack-ng -a 2 -w '+DICT+' -l '+TEMPDIR+'wpakey.txt '+filename+' >> '+TEMPDIR+'crackout.tmp'
 		proc_crack = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'), shell=True)
+		
+		ks='0'
+		pmks='0'
 		while (proc_crack.poll() == None):
 			time.sleep(1)
 			print '\r'+GR+'['+sec2hms(time.time() - START_TIME)+'] '+W+'cracking;',
@@ -1438,6 +1441,12 @@ def wpa_crack(index):
 			
 			# wipe the aircrack output file (keep it from getting too big)
 			subprocess.call('echo "" > '+TEMPDIR+'crackout.tmp',shell=True)
+		
+		print '\r'+GR+'['+sec2hms(time.time() - START_TIME)+'] '+W+'cracking;',
+		print G+str(ks)+W+' k/s;',
+		print G+str(total_pmks)+W+' keys total;',
+		print G+'100%'+W,
+		print 'eta: '+C+'0:00:00     '+W
 		
 		if os.path.exists(TEMPDIR+'wpakey.txt'):
 			f = open(TEMPDIR+'wpakey.txt','r')
