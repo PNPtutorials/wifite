@@ -7,7 +7,7 @@
 """ TODO LIST:
     -test SKA (my router won't allow it, broken SKA everytime)
     -deauth entire router if SSID is hidden?
-	-get someone to test intel 4965 fake-auth workaround
+    -get someone to test intel 4965 fake-auth workaround
 """
 
 import string, sys # basic stuff
@@ -18,16 +18,18 @@ import re          # reg-ex: for replacing characters in strings
 import urllib      # needed for downloading webpages (updating the script)
 import tempfile    # for creating temporary directory
 
+NO_XSERVER=False
 try:
 	# GUI imports
 	from Tkinter import * # all of the gui modules we need
 	import tkFileDialog   # for selecting the dictionary file
 	import threading      # so the GUI doesn't lock up
 except ImportError:
-	print R+'[!] unable to import tkinter -- GUI disabled'
+	NO_XSERVER=True
+	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=26
+REVISION=27
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -123,16 +125,16 @@ if not TEMPDIR.endswith('/'):
 
 
 
-
-NO_XSERVER=False
-try:
-	# GUI needs a root for all children
-	root = Tk()
-	root.withdraw()  # hide main window until we're ready
-	# there was a glitch where a window 'Tk' would appear on ctrl+c.. this fixed it!
-except tkinter.TclError:
-	NO_XSERVER=True
-	print R+'[!] error loading tkinter; '+O+'disabling GUI...'
+# attempt to load gui if it hasn't been disabled yet, catch errors
+if not NO_XSERVER:
+	try:
+		# GUI needs a root for all children
+		root = Tk()
+		root.withdraw()  # hide main window until we're ready
+		# there was a glitch where a window 'Tk' would appear on ctrl+c.. this fixed it!
+	except tkinter.TclError:
+		NO_XSERVER=True
+		print R+'[!] error loading tkinter; '+O+'disabling GUI...'
 
 
 
@@ -306,7 +308,8 @@ class App:
 		self.weptxt.grid(row=r, column=1, sticky='W')
 		self.weptxt.delete(0, END)
 		self.weptxt.insert(0, setwepw)
-		self.wepwendless=IntVar(frame, value=setwependl)
+		self.wepwendless=IntVar(frame)
+		self.wepwendless.set(setwependl)
 		w=Checkbutton(frame, text='endless',variable=self.wepwendless, font=f0nt, activeforeground='red',\
 					command=self.click_wependless)
 		w.grid(row=r, column=1, sticky='E')
@@ -320,7 +323,8 @@ class App:
 		self.wpatxt.grid(row=r, column=1, sticky='W')
 		self.wpatxt.delete(0, END)
 		self.wpatxt.insert(0, setwpaw)
-		self.wpawendless=IntVar(frame, value=setwpaendl)
+		self.wpawendless=IntVar(frame)
+		self.wpawendless.set(setwpaendl)
 		w=Checkbutton(frame, text='endless',variable=self.wpawendless, font=f0nt, activeforeground='red',\
 					command=self.click_wpaendless)
 		w.grid(row=r, column=1, sticky='E')
@@ -333,24 +337,30 @@ class App:
 		r += 1
 		w=Label(frame, text='wep options:', font=f0nt)
 		w.grid(row=r, column=0, sticky='W')
-		self.weparp=IntVar(value=setarp)
+		self.weparp=IntVar()
+		self.weparp.set(setarp)
 		w=Checkbutton(frame, text='arp-replay', variable=self.weparp, font=f0nt, activeforeground='red')
 		w.grid(row=r, column=1, sticky='W')
-		self.wepchop=IntVar(value=setchop)
+		self.wepchop=IntVar()
+		self.wepchop.set(setchop)
 		w=Checkbutton(frame, text='chop-chop', variable=self.wepchop, font=f0nt, activeforeground='red')
 		w.grid(row=r, column=2, sticky='W')
 		r=r+1
-		self.wepfrag=IntVar(value=setfrag)
+		self.wepfrag=IntVar()
+		self.wepfrag.set(setfrag)
 		w=Checkbutton(frame, text='fragmentation', variable=self.wepfrag, font=f0nt, activeforeground='red')
 		w.grid(row=r, column=1, sticky='W')
-		self.wep0841=IntVar(value=setp0841)
+		self.wep0841=IntVar()
+		self.wep0841.set(setp0841)
 		w=Checkbutton(frame, text='-p 0841', variable=self.wep0841, font=f0nt, activeforeground='red')
 		w.grid(row=r, column=2, sticky='W')
 		r=r+1
-		self.wepmac=IntVar(value=setmac)
+		self.wepmac=IntVar()
+		self.wepmac.set(setmac)
 		w=Checkbutton(frame, text='change mac', variable=self.wepmac, font=f0nt, activeforeground='red')
 		w.grid(row=r,column=1, sticky='W')
-		self.wepauth=IntVar(value=setauth)
+		self.wepauth=IntVar()
+		self.wepauth.set(setauth)
 		w=Checkbutton(frame, text='force auth', variable=self.wepauth, font=f0nt, activeforeground='red')
 		w.grid(row=r,column=2, sticky='W')
 		
