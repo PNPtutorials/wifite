@@ -29,7 +29,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=27
+REVISION=28
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -123,7 +123,9 @@ TEMPDIR=tempfile.mkdtemp(prefix='wifite')
 if not TEMPDIR.endswith('/'):
 	TEMPDIR += '/'
 
-
+# time remaining and time started (for the all attacks -- except WPA cracking)
+TIME_REMAINING=0
+TIME_STARTED=0
 
 # attempt to load gui if it hasn't been disabled yet, catch errors
 if not NO_XSERVER:
@@ -682,6 +684,7 @@ def main():
 	global root
 	""" where the magic happens """
 	global IFACE, ATTACK, DICT, THIS_MAC, SKIP_TO_WPA, CRACKED, HANDSHAKES, NO_XSERVER
+	global TIME_STARTED, TIME_REMAINING
 	
 	ATTEMPTS=0
 	
@@ -739,6 +742,37 @@ def main():
 		# check if we need a dictionary
 		dict_check() # get dictionary from user if need be
 		
+		# calculate estimated time remaining
+		TIME_STARTED=time.time()
+		TIME_REMAINING=0
+		for x in ATTACK:
+			index = (x - 1)
+			if TARGETS[index][2].startswith('WPA'):
+				TIME_REMAINING+=WPA_MAXWAIT
+			elif TARGETS[index][2].startswith('WEP'):
+				if WEP_ARP:
+					TIME_REMAINING+=WEP_MAXWAIT
+				if WEP_CHOP:
+					TIME_REMAINING+=WEP_MAXWAIT
+				if WEP_FRAG:
+					TIME_REMAINING+=WEP_MAXWAIT
+				if WEP_P0841:
+					TIME_REMAINING+=WEP_MAXWAIT
+		
+		t=sec2hms(TIME_REMAINING).split(':')
+		s=''
+		if t[0] != '0':
+			s=t[0] + ' hour'
+			if t[0] != '1':
+				s+='s'
+			s+=', '
+		s+=t[1] + ' minute'
+		if t[1] != '01':
+			s+='s'
+		
+		print ''
+		print GR+'[+] '+W+'estimated maximum wait time is '+O+s+W
+		
 		for x in ATTACK:
 			ATTEMPTS += 1 # increment number of attempts
 			attack(x - 1) # subtract one because arrays start at 0
@@ -746,7 +780,6 @@ def main():
 			# if user breaks during an attack and wants to skip to cracking...
 			if SKIP_TO_WPA:
 				break
-			
 		
 		if len(WPA_CRACK) > 0 and DICT != '':
 			# we have wpa handshakes to crack!
@@ -777,7 +810,7 @@ def main():
 				print O+'1 attempt,',
 			else:
 				print O+str(ATTEMPTS) + ' attempts,',
-			
+		
 		if had_wpa:
 			# only print handshakes if we cracked or targetted a WPA network
 			extra=''
@@ -879,6 +912,7 @@ def handle_args(args):
 	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT, STRIP_HANDSHAKE
 	global W, BLA, R, G, O, B, P, C, GR # colors
 	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR, EXIT_IF_NO_FAKEAUTH # wep attacks
+	global REVISION
 	
 	# first loop, finds '-no-color' in case the user doesn't want to see any color!
 	for a in args:
@@ -915,6 +949,11 @@ def handle_args(args):
 			update()
 			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
+		elif a == '-v' or a == '-version' or a == '-V' or a == '--version' or a == 'version':
+			print GR+'[+] '+W+'current wifite revision: '+G+'r'+str(REVISION)+W
+			print GR+'[+] '+W+'run '+G+'./wifite.py -upgrade'+W+' to check for latest version'
+			sys.exit(0)
+			
 	
 	# second loop, for hte other options
 	i = 0
@@ -1138,11 +1177,12 @@ def halp(full=False):
 	if full:
 		print G+'  -d, --dict\t'+GR+'     e.g. -d /pentest/passwords/wordlists/darkc0de.lst'
 		print '             \t dictionary file for WPA cracking'
-		print '             \t the program will prompt for a dictionary file if any WPA targets'
+		print '             \t the program will prompt for a wordlist file if any WPA targets'
 		print '             \t are selected for attack. using -d avoids this prompt'
-		print '             \t wifite will use "wordlist.txt" if found in same directory as this script'
+		print '             \t defaults to "wordlist.txt" found in same directory as wifite.py'
 		print '             \t     e.g. -d "none"'
-		print '             \t does not attempt to crack WPA handshakes, only captures and stores them\n'
+		print '             \t does not attempt to crack WPA handshakes'
+		print '             \t only captures the wpa handshake and backs it up to hs/\n'
 	else:
 		print G+'  -d\t   '+GR+'dictionary file, for WPA handshake cracking'
 	#WPAWAIT
@@ -1154,8 +1194,9 @@ def halp(full=False):
 		print G+'  -wpaw\t   '+GR+'time to wait for wpa handshake (in minutes)'
 	# handshake strip
 	if full:
-		print G+'  --no-strip\t'+GR+' strip unnecessary packets from .cap file (leaves only handshake)'
-		print '         \t uses pyrit (or tshark) to strip. greatly reduces size of handshkae cap files\n'
+		print G+'  --no-strip\t'+GR+' strip non-handshake packets from .cap file'
+		print '         \t uses pyrit (or tshark) to strip out unnecessary packets.'
+		print '         \t greatly reduces the size of handshkae cap files\n'
 	else:
 		print G+'  -nostrip '+GR+'strip WPA handshake from cap files (reduce .cap size)'
 	#WEPWAIT
@@ -1163,16 +1204,17 @@ def halp(full=False):
 		print G+'  --wep-wait\t'+GR+'     e.g. -wepw 10'
 		print '          \t sets the maximum time to wait for each WEP attack.'
 		print '          \t depending on the settings, this could take a long time'
-		print '          \t if the wait is "10 minutes", then EACH METHOD of attack gets 10 minutes'
-		print '          \t if you have all 4 attacks (arp, frag, chop, 0841), it would take 40 minutes'
+		print '          \t if the wait is 10 min, then EACH METHOD of attack gets 10 min'
+		print '          \t if you have all 4 WEP attacks selected, it would take 40 min'
 		print '          \t enter "0" to wait endlessly\n'
 	else:
 		print G+'  -wepw\t   '+GR+'max time (in minutes) to capture/crack WEP key of each access point'
 	#PPS
 	if full:
 		print G+'  --pps\t\t'+GR+'     e.g. -pps 400'
-		print '          \t packets-per-second (used only by WEP attacks) - larger pps means more ivs'
-		print '          \t however, smaller pps is recommended for weaker access points (or far-away APs)\n'
+		print '          \t packets-per-second; only for WEP attacks.'
+		print '          \t more pps means more captured IVs, which means a faster crack'
+		print '          \t select smaller pps for weaker wifi cards and distant APs\n'
 		
 	else:
 		print G+'  -pps\t   '+GR+'packets-per-second (for WEP replay attacks)'
@@ -1196,17 +1238,17 @@ def halp(full=False):
 		print G+'  -no0841  '+GR+'disables -p0841 attack'
 	#WEP FORCE FAKE-AUTH (cancels attack if failed)
 	if full:
-		print G+'  --force-auth\t '+GR+'during a WEP attack, if fake-authentication fails, the attack ends'
-		print   '              \t most attacks require fake-authentication, but some high-traffic routers'
-		print   '              \t give off enough packets to be cracked without injecting packets\n'
+		print G+'  --force-auth\t '+GR+'during a WEP attack: if fake-auth fails, the attack ends'
+		print   '              \t most WEP attacks require fake-authentication'
+		print   '              \t default is to "stay the course" and hope for more packets\n'
 	else:
 		print G+'  -f       '+GR+'force auth: WEP attacks end if fake-authentication fails'
 	# SSID DEAUTH
 	if full:
 		#-nod --no-deauth
-		print G+'  --no-deauth\t '+GR+'wifite will automatically deauth clients of hidden SSIDs to decloack the name'
-		print   '             \t use this feature to disable the automatic deauth of clients'
-		print   '             \t *this feature is only available in fixed-channel mode*\n'
+		print G+'  --no-deauth\t '+GR+'disables the deauthing of clients on hidden APs'
+		print   '             \t by default, wifite will deauth clients connected to hidden APs'
+		print   '             \t *wifite only deauths hidden SSID clients in FIXED CHANNEL MODE*\n'
 	else:
 		print G+'  -nod     '+GR+'do not deauth hidden SSIDs while scanning on a fixed channel'
 	#NO COLORS
@@ -1221,7 +1263,7 @@ def halp(full=False):
 	if full:
 		print G+'  -e, --essid\t'+GR+'     e.g. -e "2WIRE759"'
 		print '             \t essid (name) of the access point (router)'
-		print '             \t this forces a narrowed attack; no other networks will be attacked\n'
+		print '             \t this forces a narrow attack; no other networks will be attacked\n'
 		#print '             \t     e.g. -e "all"'
 		#print '             \t using the essid "all" results in every network'
 		#print '             \t being targeted and attacked. this is not recommended'
@@ -1231,24 +1273,24 @@ def halp(full=False):
 	#ALL
 	if full:
 		print G+'  -all, --all\t'+GR+' target and attack all access points found'
-		print '           \t this is dangerous because most attacks require injection, and most'
-		print '           \t wireless cards cannot inject unless they are close to the router\n'
+		print '           \t this is dangerous because most attacks require injection,'
+		print '           \t most wifi cards cann;t inject unless they are close to the AP\n'
 	else:
 		print G+'  -all\t   '+GR+'target and attack access points found'
 	#POWER
 	if full:
 		print G+'  -p, --power\t'+GR+'     e.g. -p 55'
 		print '             \t minimum power level (dB)'
-		print '             \t this is similar to the "-e all" option, except it filters'
-		print '             \t access points that are too far away for the attacks to be useful\n'
+		print '             \t this is similar to the "-e all" option, except it filters APs'
+		print '             \t that are too far away for the attacks to be useful\n'
 	else:
 		print G+'  -p\t   '+GR+'filters minimum power level (dB) to attack; ignores lower levels'
 	#CHANNEL
 	if full:
 		print G+'  -c, --channel\t'+GR+'     e.g. -c 6'
 		print '               \t channel to scan'
-		print '               \t not using this option causes program to search all possible channels'
-		print '               \t only use -c or --channel if you know the channel you want to listen on\n'
+		print '               \t not using this switch defaults to all possible channels'
+		print '               \t only use -c or --channel if you know the channel to listen on\n'
 	else:
 		print G+'  -c\t   '+GR+'channel to scan (default is all channels)'
 	#NOWPA
@@ -1563,7 +1605,7 @@ def attack_wep_all(index):
 	global TARGETS, CLIENTS, IFACE, WEP_MAXWAIT, WEP_PPS
 	global THIS_MAC, WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841
 	global AUTOCRACK, CRACKED, OLD_MAC, TEMPDIR, EXIT_IF_NO_FAKEAUTH
-	global SKIP_TO_WPA, WPA_CRACK # to exit early
+	global SKIP_TO_WPA, WPA_CRACK, EXIT_PROGRAM # to exit early
 	global HAS_INTEL4965
 	
 	# to keep track of how long we are taking
@@ -1613,7 +1655,8 @@ def attack_wep_all(index):
 				for i in xrange(1, 4):
 					time.sleep(1)
 					
-					print '\r'+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+O+'attempting fake-authentication (attempt '+str(i)+'/3)',
+					print '\r'+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+\
+								'] '+W+'attempting '+O+'fake-authentication'+W+' ('+str(i)+'/3)',
 					sys.stdout.flush()
 					time.sleep(0.3)
 					faked=attack_fakeauth(index)
@@ -1625,12 +1668,12 @@ def attack_wep_all(index):
 				
 			if faked:
 				# fake auth was successful
-				print GR+'\n['+get_time(WEP_MAXWAIT,TIME_START)+'] '+G+'fake authentication successful :)'
+				print GR+'\r['+get_time(WEP_MAXWAIT,TIME_START)+'] '+G+'fake authentication successful :)       '
 				if CHANGE_MAC == False:
 					client=THIS_MAC
 			else:
 				# fake auth was unsuccessful (SKA?)
-				print GR+'\n['+get_time(WEP_MAXWAIT, TIME_START)+'] '+R+'fake authentication unsuccessful :('
+				print GR+'\r['+get_time(WEP_MAXWAIT, TIME_START)+'] '+R+'fake authentication unsuccessful :(       '
 				if EXIT_IF_NO_FAKEAUTH:
 					print GR+'['+get_time(WEP_MAXWAIT, TIME_START)+'] '+R+'exiting attack...'
 					# kill airodump
@@ -1642,6 +1685,10 @@ def attack_wep_all(index):
 						pass
 					subprocess.call(['killall','airodump-ng'], stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
 					return
+				else:
+					print GR+'['+get_time(WEP_MAXWAIT, TIME_START)+'] '+O+\
+							'continuing attack anyway (odds of success are low)'+W
+					
 				
 		else:
 			# if we have a client and it's not SKA, we can just change our MAC
@@ -1697,9 +1744,9 @@ def attack_wep_all(index):
 					# more to come
 					opts+=', '+G+'n'+W
 					if i == len(ATTACK)-2:
-						menu=menu+G+'   [n]ext attack (there is 1 target remaining)\n'
+						menu=menu+O+'   [n]ext attack (there is 1 target remaining)\n'
 					else:
-						menu=menu+G+'   [n]ext attack (there are '+str(len(ATTACK)-i-1)+' targets remaining)\n'
+						menu=menu+O+'   [n]ext attack (there are '+str(len(ATTACK)-i-1)+' targets remaining)\n'
 					break
 		
 		if len(WPA_CRACK) > 0 and DICT != '' and DICT != 'none':
@@ -1745,8 +1792,10 @@ def attack_wep_all(index):
 				return
 			
 			else:
-				EXIT_PROGRAM=True
-				return
+				# user selected something else (must be 'e', exit completely)
+				SKIP_TO_WPA=True # exits out of wep/wpa attacks
+				WPA_CRACK=[] # we have no wpa's to crack! on noez, it'll exit
+				return # gtfo
 			
 		else:
 			# no reason to keep running! gtfo
@@ -2092,6 +2141,12 @@ def attack_wep_all(index):
 	except UnboundLocalError:
 		pass
 	
+	# if we were using intel4965, kill wpa_supplicant (attack is over)
+	if HAS_INTEL4965:
+		subprocess.call(['killall','wpa_supplicant'], stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
+		# kill the temp file for wpa_supplicant as well
+		subprocess.call(['rm','-rf','intel4965.tmp'])
+	
 	# clean up airodump
 	subprocess.call(['rm','-rf',TEMPDIR+'wep-01.cap',TEMPDIR+'wep-01.csv',TEMPDIR+'wep-01.kismet.csv',\
 					TEMPDIR+'wep-01.kismet.netxml',TEMPDIR+'wep-01.ivs'])
@@ -2167,28 +2222,26 @@ def attack_fakeauth_intel(index):
 			'}')
 	f.close()
 	
-	proc_intel=subprocess.Popen(['wpa_supplicant','-c','fake.conf','-i',IFACE,'-Dwext','-B'],\
-								stdout=subprocess.PIPE,stderr=subprocess.PIPE)
-	txt=proc_intel.communicate()
+	subprocess.call(['rm','-rf','intel4965.tmp'])
+	cmd='wpa_supplicant -c fake.conf -i wlan0 -Dwext -B 2>&1 > intel4965.tmp'
+	print GR+'[+] '+W+'executing command: '+G+cmd+W+''
+	proc_intel=subprocess.Popen(cmd, shell=True,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
+	while proc_intel.poll() == None:
+		txt=''
+		try:
+			f=open('intel4965.tmp','r')
+			txt=f.read()
+			f.close()
+		except IOError:
+			pass
+		
+		if txt.find('State: ASSOCIATED -> COMPLETED') != -1:
+			return True
 	
-	# should we kill wpa_supplicant? does it need to keep running...?
-	try:
-		os.kill(proc_intel.pid, signal.SIGTERM) # wpa_supplicant
-	except OSError:
-		pass
-	except UnboundLocalError:
-		pass
-	subprocess.call(['killall','wpa_supplicant'])
-	# end of wpa_suplikill
-	
-	subprocess.call(['rm','-rf','fake.conf']) # remove fake.conf file
-	
-	if txt[0].find('State: ASSOCIATED -> COMPLETED') != -1 or txt[1].find('State: ASSOCIATED -> COMPLETED') != -1 :
-		return True
-	
+	print R+'[!]        wpa_supplicant workaround failed!'
 	print R+'[!]        wpa_supplicant output:'
-	print 'stdout    ' + txt[0].strip().replace('\n','\nstdout    ')
-	print 'stderr    ' + txt[1].strip().replace('\n','\nstderr    ')
+	print '          ' + txt.strip().replace('\n','\n          ')
+	print W
 	
 	return False
 
