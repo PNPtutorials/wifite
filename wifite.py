@@ -18,6 +18,8 @@ import re          # reg-ex: for replacing characters in strings
 import urllib      # needed for downloading webpages (updating the script)
 import tempfile    # for creating temporary directory
 
+import pexpect
+
 NO_XSERVER=False
 try:
 	# GUI imports
@@ -29,7 +31,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=32
+REVISION=33
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2250,21 +2252,24 @@ def attack_fakeauth_intel(index):
 	
 	started_at=time.time()
 	
-	cmd='wpa_supplicant -cfake.conf -iwlan0 -Dwext -dd > intel4965.tmp 2>&1'
-	print GR+'[+] '+W+'executing command: '+G+cmd+W+''
-	proc_intel=subprocess.Popen(cmd, shell=True,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
+	cmd='wpa_supplicant -cfake.conf -iwlan0 -Dwext -dd'
+	print GR+'[+] '+W+'executing command: '+G+cmd+W+'; wait 20 seconds'
+	
+	p=pexpect.spawn(cmd)
+	try:
+		p.expect('State: ASSOCIATED -> COMPLETED', timeout=20)
+		print GR+'[+] '+W+'received '+G+'State: ASSOCIATED -> COMPLETED'+W
+		return True
+	except pexpect.TIMEOUT:
+		print R+'[+] did not receive '+O+'State: ASSOCIATED -> COMPLETED'
+	
+	"""
+	proc_intel=subprocess.Popen(cmd, shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	calc=int(time.time() - started_at)
-	while proc_intel.poll() == None and calc < 15:
-		time.sleep(1)
+	txt=''
+	while proc_intel.poll() == None and calc < 20:
+		txt=txt+proc_intel.stdout.read(1)
 		txt=''
-		
-		try:
-			f=open('intel4965.tmp','r')
-			txt=f.read()
-			f.close()
-		except IOError:
-			pass
-		
 		if txt.find('State: ASSOCIATED -> COMPLETED') != -1:
 			print 'ASSOCIATED!'
 			return True
@@ -2273,7 +2278,8 @@ def attack_fakeauth_intel(index):
 			return True
 		
 		calc=int(time.time() - started_at)
-		print '\r' + GR+'[+] waiting for ' + str(15 - calc) + ' sc'
+		print '\r' + GR+'[+] waiting for ' + str(20 - calc) + ' sc'
+	"""
 	
 	print R+'[!]        wpa_supplicant workaround failed!'
 	#print R+'[!]        wpa_supplicant output:'
@@ -3020,11 +3026,12 @@ def sec2hms(sec):
 	
 	return result
 
+
+#child = subprocess.Popen('sh asdf.sh', shell=True, stdout=subprocess.PIPE)
+
 main() # launch the main method
 subprocess.call(['rm','-rf',TEMPDIR])
 subprocess.call('rm -rf /tmp/wifite*', shell=True, stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
-
-#subprocess.call('rm -rf /tmp/wifite*/', shell=True)
 
 # helpful diagram!
 # TARGETS list format
