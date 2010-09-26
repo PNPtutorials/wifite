@@ -29,7 +29,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=31
+REVISION=32
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -1677,12 +1677,12 @@ def attack_wep_all(index):
 				print GR+'[+] '+W+'stopping '+O+'mon0'
 				subprocess.call(['airmon-ng','stop','mon0'], stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
 				
+				print ''+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+O+'attempting intel 4965 workaround'+W
+				faked=attack_fakeauth_intel(index)
+				
 				print GR+'[+] '+W+'starting '+O+'wlan1'+W+' on channel '+O+str(TARGETS[index][1])+W
 				subprocess.call(['airmon-ng','start','wlan0',str(TARGETS[index][1])], \
 							stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
-				
-				print ''+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+O+'attempting intel 4965 workaround'+W
-				faked=attack_fakeauth_intel(index)
 				
 				print GR+'[+] '+R+'starting '+W+'airodump-ng'
 				# open airodump to capture packets
@@ -2248,12 +2248,16 @@ def attack_fakeauth_intel(index):
 	
 	subprocess.call(['rm','-rf','intel4965.tmp'])
 	
-	cmd='wpa_supplicant -cfake.conf -iwlan0 -Dwext -dd > intel4965.tmp'
+	started_at=time.time()
+	
+	cmd='wpa_supplicant -cfake.conf -iwlan0 -Dwext -dd > intel4965.tmp 2>&1'
 	print GR+'[+] '+W+'executing command: '+G+cmd+W+''
 	proc_intel=subprocess.Popen(cmd, shell=True,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
-	while proc_intel.poll() == None:
-		time.sleep(0.5)
+	calc=int(time.time() - started_at)
+	while proc_intel.poll() == None and calc < 15:
+		time.sleep(1)
 		txt=''
+		
 		try:
 			f=open('intel4965.tmp','r')
 			txt=f.read()
@@ -2261,8 +2265,15 @@ def attack_fakeauth_intel(index):
 		except IOError:
 			pass
 		
-		if txt.find('State: ASSOCIATED -> COMPLETED') != -1 or txt.find('Already associated with the selected AP.') != -1:
+		if txt.find('State: ASSOCIATED -> COMPLETED') != -1:
+			print 'ASSOCIATED!'
 			return True
+		if txt.find('Already associated with the selected AP.') != -1:
+			print 'ALREADY ASSOCIATED'
+			return True
+		
+		calc=int(time.time() - started_at)
+		print '\r' + GR+'[+] waiting for ' + str(15 - calc) + ' sc'
 	
 	print R+'[!]        wpa_supplicant workaround failed!'
 	#print R+'[!]        wpa_supplicant output:'
