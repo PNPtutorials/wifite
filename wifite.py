@@ -8,6 +8,8 @@
     -test SKA (my router won't allow it, broken SKA everytime)
     -deauth entire router if SSID is hidden?
     -get someone to test intel 4965 fake-auth workaround
+	-convert all subprocess calls to pexpect
+	-convert subprocess.call('rm', to os.remove(
 """
 
 import string, sys # basic stuff
@@ -18,7 +20,12 @@ import re          # reg-ex: for replacing characters in strings
 import urllib      # needed for downloading webpages (updating the script)
 import tempfile    # for creating temporary directory
 
-import pexpect
+try:
+	import pexpect # used during wpa_supplicant attacks
+	proc_intel=None
+except ImportError:
+	# some users may nto have this module
+	print '[!] unable to import pexpect; intel4965 workaround will fail'
 
 NO_XSERVER=False
 try:
@@ -31,7 +38,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=33
+REVISION=34
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2237,7 +2244,7 @@ def get_ivs(filename):
 	return -1
 
 def attack_fakeauth_intel(index):
-	global TARGETS, IFACE
+	global TARGETS, IFACE, proc_intel
 	
 	ssid=TARGETS[index][8]
 	f=open('fake.conf','w')
@@ -2248,38 +2255,18 @@ def attack_fakeauth_intel(index):
 			'}')
 	f.close()
 	
-	subprocess.call(['rm','-rf','intel4965.tmp'])
-	
-	started_at=time.time()
-	
 	cmd='wpa_supplicant -cfake.conf -iwlan0 -Dwext -dd'
 	print GR+'[+] '+W+'executing command: '+G+cmd+W+'; wait 20 seconds'
 	
-	p=pexpect.spawn(cmd)
+	proc_intel=pexpect.spawn(cmd)
 	try:
-		p.expect('State: ASSOCIATED -> COMPLETED', timeout=20)
+		proc_intel.expect('State: ASSOCIATED -> COMPLETED', timeout=20)
 		print GR+'[+] '+W+'received '+G+'State: ASSOCIATED -> COMPLETED'+W
 		return True
 	except pexpect.TIMEOUT:
 		print R+'[+] did not receive '+O+'State: ASSOCIATED -> COMPLETED'
-	
-	"""
-	proc_intel=subprocess.Popen(cmd, shell=True,stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-	calc=int(time.time() - started_at)
-	txt=''
-	while proc_intel.poll() == None and calc < 20:
-		txt=txt+proc_intel.stdout.read(1)
-		txt=''
-		if txt.find('State: ASSOCIATED -> COMPLETED') != -1:
-			print 'ASSOCIATED!'
-			return True
-		if txt.find('Already associated with the selected AP.') != -1:
-			print 'ALREADY ASSOCIATED'
-			return True
-		
-		calc=int(time.time() - started_at)
-		print '\r' + GR+'[+] waiting for ' + str(20 - calc) + ' sc'
-	"""
+		# kill the child process
+		proc_intel.close(force=True)
 	
 	print R+'[!]        wpa_supplicant workaround failed!'
 	#print R+'[!]        wpa_supplicant output:'
@@ -3025,9 +3012,6 @@ def sec2hms(sec):
 	result += str(s)
 	
 	return result
-
-
-#child = subprocess.Popen('sh asdf.sh', shell=True, stdout=subprocess.PIPE)
 
 main() # launch the main method
 subprocess.call(['rm','-rf',TEMPDIR])
