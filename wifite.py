@@ -29,7 +29,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=28
+REVISION=29
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2223,7 +2223,7 @@ def attack_fakeauth_intel(index):
 	f.close()
 	
 	subprocess.call(['rm','-rf','intel4965.tmp'])
-	cmd='wpa_supplicant -c fake.conf -i wlan0 -Dwext -B 2>&1 > intel4965.tmp'
+	cmd='wpa_supplicant -c fake.conf -i wlan0 -D wext -dd 2>&1 > intel4965.tmp'
 	print GR+'[+] '+W+'executing command: '+G+cmd+W+''
 	proc_intel=subprocess.Popen(cmd, shell=True,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
 	while proc_intel.poll() == None:
