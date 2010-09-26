@@ -29,7 +29,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=30
+REVISION=31
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -1674,6 +1674,13 @@ def attack_wep_all(index):
 				subprocess.call(['killall','airodump-ng'], stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
 				time.sleep(0.5)
 				
+				print GR+'[+] '+W+'stopping '+O+'mon0'
+				subprocess.call(['airmon-ng','stop','mon0'], stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
+				
+				print GR+'[+] '+W+'starting '+O+'wlan1'+W+' on channel '+O+str(TARGETS[index][1])+W
+				subprocess.call(['airmon-ng','start','wlan0',str(TARGETS[index][1])], \
+							stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
+				
 				print ''+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+O+'attempting intel 4965 workaround'+W
 				faked=attack_fakeauth_intel(index)
 				
@@ -2240,10 +2247,12 @@ def attack_fakeauth_intel(index):
 	f.close()
 	
 	subprocess.call(['rm','-rf','intel4965.tmp'])
-	cmd='wpa_supplicant -c fake.conf -i wlan0 -D wext -dd 2>&1 > intel4965.tmp'
+	
+	cmd='wpa_supplicant -cfake.conf -iwlan0 -Dwext -dd > intel4965.tmp'
 	print GR+'[+] '+W+'executing command: '+G+cmd+W+''
 	proc_intel=subprocess.Popen(cmd, shell=True,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
 	while proc_intel.poll() == None:
+		time.sleep(0.5)
 		txt=''
 		try:
 			f=open('intel4965.tmp','r')
@@ -2252,12 +2261,12 @@ def attack_fakeauth_intel(index):
 		except IOError:
 			pass
 		
-		if txt.find('State: ASSOCIATED -> COMPLETED') != -1:
+		if txt.find('State: ASSOCIATED -> COMPLETED') != -1 or txt.find('Already associated with the selected AP.') != -1:
 			return True
 	
 	print R+'[!]        wpa_supplicant workaround failed!'
-	print R+'[!]        wpa_supplicant output:'
-	print '          ' + txt.strip().replace('\n','\n          ')
+	#print R+'[!]        wpa_supplicant output:'
+	#print '          ' + txt.strip().replace('\n','\n          ')
 	print W
 	
 	return False
