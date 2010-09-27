@@ -24,7 +24,8 @@ try:
 	proc_intel=None
 except ImportError:
 	# some users may nto have this module
-	print '[!] unable to import pexpect; intel4965 workaround will fail'
+	print '[!] unable to import pexpect'
+	print '[!] if your chipset is intel4965; the fake-auth workaround will fail'
 
 NO_XSERVER=False
 try:
@@ -37,7 +38,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=36
+REVISION=37
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -972,7 +973,7 @@ def handle_args(args):
 	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT, STRIP_HANDSHAKE
 	global W, BLA, R, G, O, B, P, C, GR # colors
 	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR, EXIT_IF_NO_FAKEAUTH # wep attacks
-	global REVISION, THEFILE
+	global REVISION, THEFILE, CHANGE_MAC
 	
 	# first loop, finds '-no-color' in case the user doesn't want to see any color!
 	for a in args:
@@ -1667,7 +1668,7 @@ def attack_wep_all(index):
 	global THIS_MAC, WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841
 	global AUTOCRACK, CRACKED, OLD_MAC, TEMPDIR, EXIT_IF_NO_FAKEAUTH
 	global SKIP_TO_WPA, WPA_CRACK, EXIT_PROGRAM # to exit early
-	global HAS_INTEL4965, THEFILE
+	global HAS_INTEL4965, THEFILE, CHANGE_MAC
 	
 	# to keep track of how long we are taking
 	TIME_START=time.time()
