@@ -38,7 +38,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=38
+REVISION=39
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2310,11 +2310,12 @@ def attack_fakeauth_intel(index):
 	f.close()
 	
 	cmd='wpa_supplicant -cfake.conf -iwlan0 -Dwext -dd'
-	print GR+'[+] '+W+'executing command: '+G+cmd+W+'; wait 20 seconds'
+	print GR+'[+] '+W+'executing command: '+G+cmd+W+''
+	print GR+'[+] '+W+'30 second timeout starting now...'
 	
 	proc_intel=pexpect.spawn(cmd)
 	try:
-		proc_intel.expect('State: ASSOCIATED -> COMPLETED', timeout=20)
+		proc_intel.expect('State: ASSOCIATED -> COMPLETED', timeout=30)
 		print GR+'[+] '+W+'received '+G+'State: ASSOCIATED -> COMPLETED'+W
 		return True
 	except pexpect.TIMEOUT:
@@ -2735,7 +2736,10 @@ def gettargets():
 		if ESSID == '':
 			print GR+'[+] '+W+'waiting for targets. press '+G+'Ctrl+C'+W+' when ready\n'
 		elif ESSID == 'all' or ESSID.startswith('pow>'):
-			for i in xrange(20, 0, -1):
+			time_wait=20
+			if CHANNEL == '0':
+				time_wait=30
+			for i in xrange(time_wait, 0, -1):
 				print GR+'\r[+] '+W+'waiting '+G+str(i)+W+' seconds for targets to appear. press '+O+'Ctrl+C'+W+' to skip the wait ',
 				sys.stdout.flush()
 				time.sleep(1)
