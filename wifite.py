@@ -38,7 +38,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=40
+REVISION=41
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -246,12 +246,20 @@ class App:
 		w.grid(row=r, column=0, sticky='E')
 		self.iface = StringVar(frame)
 		(lst,default)=self.ifacelist()
-		if lst == []:
+		
+		print GR+'[+] '+W+'wireless devices: "'+G+ ', '.join(lst) +W+'"'
+		if lst == [] or len(lst) == 0:
 			print GR+'[!] '+R+'no wireless adapaters found'
 			print GR+'[!] '+O+'make sure your wifi card is plugged in, then check airmon-ng'
 			sys.exit(0)
+		elif len(lst) == 1:
+			if lst[0].strip() == '':
+				print GR+'[!] '+R+'no wireless adapaters found'
+				print GR+'[!] '+O+'make sure your wifi card is plugged in, then check airmon-ng'
+				sys.exit(0)
 		
 		self.iface.set(default)
+		
 		w=apply(OptionMenu, (frame, self.iface) + tuple(lst))
 		w.config(takefocus=1, width=25, font=f0nt)
 		w.grid(row=r,column=1,columnspan=2, sticky='W')
@@ -1961,7 +1969,7 @@ def attack_wep_all(index):
 							proc_replay.wait()
 							result=proc_replay.communicate()[0]
 							if result == None:
-								result='none'
+								result = 'none'
 							else:
 								result = result.strip()
 							
