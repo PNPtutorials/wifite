@@ -38,7 +38,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=37
+REVISION=38
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -71,11 +71,11 @@ WEP_CHOP   =True  # use chop-chop attack
 WEP_FRAG   =True  # use fragmentation attack
 WEP_P0841  =True  # use -p 0841 replay attack
 AUTOCRACK  =9000  # begin cracking when our IVS count is...  OVER9000!!!!!
-CHANGE_MAC =False # default is false because changing my mac causes attacks to NOT work on my router
-                  # set =True if you want to [temporarily] change the mac address of your wifi card
+CHANGE_MAC =True  # set =True if you want to [temporarily] change the mac address of your wifi card
                   # to the MAC of a client on the targeted network.
 
-EXIT_IF_NO_FAKEAUTH=False # during a WEP attack, if fake-authentication fails, the attack is cancelled
+EXIT_IF_NO_FAKEAUTH=True # during a WEP attack, if fake-authentication fails, the attack is cancelled
+
 
 NO_HIDDEN_DEAUTH=False # when true, disables the option to send deauth packets to hidden access points
                        # only deauths clients and only when a fixed channel is selected
@@ -171,7 +171,7 @@ class App:
 		setchop   =1
 		setfrag   =1
 		setp0841  =1
-		setmac    =0
+		setmac    =1
 		setauth   =0
 		try:
 			f=open('.wifite.conf','r')
@@ -227,8 +227,8 @@ class App:
 					setfrag=0
 				elif l == '-no0841':
 					setp0841=0
-				elif l == '-mac':
-					setmac=1
+				elif l == '-keepmac':
+					setmac=0
 				elif l == '-f':
 					setauth=1
 				elif l == '-console':
@@ -387,8 +387,8 @@ class App:
 		w.grid(row=r,column=1, sticky='W')
 		self.wepauth=IntVar()
 		self.wepauth.set(setauth)
-		w=Checkbutton(frame, text='force auth', variable=self.wepauth, font=f0nt, activeforeground='red')
-		w.grid(row=r,column=2, sticky='W')
+		w=Checkbutton(frame, text='ignore fake-auth', variable=self.wepauth, font=f0nt, activeforeground='red')
+		w.grid(row=r,column=1, columnspan=2, sticky='E')
 		
 		r=r+1
 		w=Label(frame, text='packets/sec:', font=f0nt)
@@ -566,8 +566,8 @@ class App:
 		if self.wep0841.get() != 1:
 			cmd.append('-no0841')
 		
-		if self.wepmac.get() == 1:
-			cmd.append('-mac')
+		if self.wepmac.get() == 0:
+			cmd.append('-keepmac')
 		
 		if self.wepauth.get() == 1:
 			cmd.append('-f')
@@ -1155,9 +1155,13 @@ def handle_args(args):
 				sys.exit(0)
 			i=i+1
 		
+		elif a == '-keepmac' or a == '--keep-mac':
+			CHANGE_MAC=False
+			print GR+'[+] '+W+'change mac to WEP client '+O+'disabled'+W
+			
 		elif a == '-mac' or a == '--change-mac':
-			CHANGE_MAC=True
-			print GR+'[+] '+W+'change mac during WEP attack '+G+'enabled'+W
+			# keep this here, for the old-school users that still use '-mac' option
+			print GR+'[+] '+W+'change mac to WEP client '+G+'enabled'+W
 		
 		elif a == '-noarp' or a == '--no-arp':
 			WEP_ARP=False
@@ -1178,9 +1182,9 @@ def handle_args(args):
 		elif a == '-console' or a == '--console':
 			print GR+'[+] '+G+'console mode'+W+' activated'
 		
-		elif a == '-f' or a == '--force-auth':
-			print GR+'[+] '+W+'continue WEP attack despite fake-auth failure '+O+'disabled'+W+''
-			EXIT_IF_NO_FAKEAUTH=True
+		elif a == '-f' or a == '--force-fake':
+			print GR+'[+] '+W+'continue WEP attack despite fake-auth failure '+O+'enabled'+W+''
+			EXIT_IF_NO_FAKEAUTH=False
 		
 		elif a == '-nod' or a == '--no-deauth':
 			print GR+'[+] '+W+'deauthentication of hidden networks '+O+'disabled'+W+''
@@ -1277,16 +1281,13 @@ def halp(full=False):
 		print '          \t packets-per-second; only for WEP attacks.'
 		print '          \t more pps means more captured IVs, which means a faster crack'
 		print '          \t select smaller pps for weaker wifi cards and distant APs\n'
-		
 	else:
 		print G+'  -pps\t   '+GR+'packets-per-second (for WEP replay attacks)'
-	#CHANGE_MAC
+	#(don't) CHANGE_MAC
 	if full:
-		print G+'  --change-mac\t'+GR+' changes mac address of interface to a client\'s mac (if found)'
-		print '          \t only affects WEP-based attacks\n'
-		
+		print G+'  --keep-mac\t'+GR+' do not change MAC address of wireless interface\n'
 	else:
-		print G+'  -mac\t   '+GR+'for WEP attacks only: change mac address to client\'s mac (if found)'
+		print G+'  -keepmac '+GR+'do NOT change mac address of wireless interface'
 	#wep: no-attack
 	if full:
 		print G+'  --no-arp\t'+GR+' WEP disables arp-replay attack'
@@ -1300,11 +1301,11 @@ def halp(full=False):
 		print G+'  -no0841  '+GR+'disables -p0841 attack'
 	#WEP FORCE FAKE-AUTH (cancels attack if failed)
 	if full:
-		print G+'  --force-auth\t '+GR+'during a WEP attack: if fake-auth fails, the attack ends'
+		print G+'  --force-fake\t '+GR+'during a WEP attack, if fake-auth fails, keep going'
 		print   '              \t most WEP attacks require fake-authentication'
-		print   '              \t default is to "stay the course" and hope for more packets\n'
+		print   '              \t the default is to stop the attack when fake-auth fails\n'
 	else:
-		print G+'  -f       '+GR+'force auth: WEP attacks end if fake-authentication fails'
+		print G+'  -f       '+GR+'force WEP attacks to continue if fake-authentication fails'
 	# SSID DEAUTH
 	if full:
 		#-nod --no-deauth

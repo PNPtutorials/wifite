@@ -1,6 +1,6 @@
 
   .;'                     `;,
- .;'  ,;'             `;,  `;,   WiFite r36
+ .;'  ,;'             `;,  `;,   WiFite r38
 .;'  ,;'  ,;'     `;,  `;,  `;,
 ::   ::   :   ( )   :   ::   ::  mass WEP/WPA cracker
 ':.  ':.  ':. /_\ ,:'  ,:'  ,:'
@@ -48,17 +48,16 @@ Usage: python wifite.py [SETTINGS] [FILTERS]
           	 more pps means more captured IVs, which means a faster crack
           	 select smaller pps for weaker wifi cards and distant APs
 
-  --change-mac	 changes mac address of interface to a client's mac (if found)
-          	 only affects WEP-based attacks
+  --keep-mac	 do not change MAC address of wireless interface
 
   --no-arp	 WEP disables arp-replay attack
   --no-chop	 WEP disables chop-chop attack
   --no-frag	 WEP disables fragmentation attack
   --no-p0841	 WEP disables -p0841 attack
 
-  --force-auth	 during a WEP attack: if fake-auth fails, the attack ends
+  --force-fake	 during a WEP attack, if fake-auth fails, keep going
               	 most WEP attacks require fake-authentication
-              	 default is to "stay the course" and hope for more packets
+              	 the default is to stop the attack when fake-auth fails
 
   --no-deauth	 disables the deauthing of clients on hidden APs
              	 by default, wifite will deauth clients connected to hidden APs

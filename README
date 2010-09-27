@@ -44,8 +44,20 @@ COMMAND LINE
 =============
 there are a lot of command-line options with wifite. check them out!
 ./wifite.py -help
-these options are so you can make a one-liner that does whatever you want.
-throw that line into a script on the desktop and it's one click away!
+
+
+DEFAULTS
+=============
+your wireless MAC address will be changed to that of a client on WEP network
+after the attack is complete, your MAC address will be changed back
+to disable, type -keepmac or --keep-mac, or deselect "change mac" in the GUI
+
+WEP attacks end if fake-authentication is unsuccessful.
+to disable, type -f or --force-fake, or select "ignore fake-auth" in the GUI
+
+clients connected to access points with hidden SSIDs are deauthenticated
+these deauths will only be sent while scanning for networks on a fixed channel
+to disable, type -nod or --no-deauth
 
 
 TIPS & TRICKS
