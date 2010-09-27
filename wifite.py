@@ -5,11 +5,10 @@
 """
 
 """ TODO LIST:
-    -test SKA (my router won't allow it, broken SKA everytime)
-    -deauth entire router if SSID is hidden?
-    -get someone to test intel 4965 fake-auth workaround
-	-convert all subprocess calls to pexpect
-	-convert subprocess.call('rm', to os.remove(
+    -find someone to test SKA (my router won't allow it, broken SKA everytime)
+    -deauth entire router if SSID is hidden? (no, sets off alarms)
+    -convert all subprocess calls to pexpect (maybe?)
+    -convert subprocess.call('rm', to os.remove(
 """
 
 import string, sys # basic stuff
@@ -38,7 +37,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=34
+REVISION=35
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -438,6 +437,8 @@ class App:
 			self.dicttxt.insert(0, file.name)
 	
 	def ifacelist(self):
+		# looks up all interfaces in airmon-ng
+		# returns a tuple, the list of ifaces, and the 'default' -- the one in monitor mode
 		lst=[]
 		proc=subprocess.Popen(['airmon-ng'], stdout=subprocess.PIPE)
 		txt=proc.communicate()[0]
@@ -466,6 +467,12 @@ class App:
 						break
 			if default != '':
 				break
+		
+		if len(lst) == 0:
+			print R+'[!] no wireless interfaces were found!'
+			print R+'[!] run airmon-ng; check your wireless drivers'
+			print GR+'[+] '+O+'the program will now exit'+W
+			sys.exit(0)
 		
 		return lst, default
 	def execute(self):
