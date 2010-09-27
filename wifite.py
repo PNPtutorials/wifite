@@ -37,7 +37,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=35
+REVISION=36
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -158,6 +158,7 @@ class App:
 		setchan   =6
 		setallchan=1
 		setpower  =50
+		setselarg =0
 		setallpow =1
 		setdict   ='/pentest/passwords/wordlists/darkc0de.lst'
 		setwepw   ='10'
@@ -229,6 +230,8 @@ class App:
 					setmac=1
 				elif l == '-f':
 					setauth=1
+				elif l == '-console':
+					setselarg=1
 					
 		except IOError:
 			pass
@@ -268,13 +271,21 @@ class App:
 		self.allchan=IntVar(frame)
 		self.allchan.set(setallchan)
 		self.click_channel()
-		w=Checkbutton(frame, text='all channels', variable=self.allchan, command=self.click_channel, font=f0nt,\
+		self.chkallchan=Checkbutton(frame, text='all channels', variable=self.allchan, command=self.click_channel, font=f0nt,\
 							activeforeground='red')
-		w.grid(row=r, column=2, sticky='W')
+		self.chkallchan.grid(row=r, column=2, sticky='W')
 		
 		r+= 1
 		w=Label(frame, text=' ', font=('',5,''))
 		w.grid(row=r,columnspan=3)
+		
+		r+=1
+		self.selectarg=IntVar(frame)
+		self.selectarg.set(setselarg)
+		
+		w=Checkbutton(frame, text='select targets from list', variable=self.selectarg, command=self.click_selectarg,\
+				font=f0nt, activeforeground='red')
+		w.grid(row=r, column=1, columnspan=2,sticky='W')
 		
 		r+= 1
 		w=Label(frame, text='minimum power:', font=f0nt)
@@ -288,8 +299,12 @@ class App:
 		self.all=IntVar(frame)
 		self.all.set(setallpow)
 		self.click_power()
-		w=Checkbutton(frame, text='everyone', variable=self.all, command=self.click_power, font=f0nt, activeforeground='red')
-		w.grid(row=r, column=2, sticky='W')
+		self.chkeveryone=Checkbutton(frame, text='everyone', variable=self.all, command=self.click_power, font=f0nt, activeforeground='red')
+		self.chkeveryone.grid(row=r, column=2, sticky='W')
+		
+		if self.selectarg.get() != 0:
+			self.power.config(state=DISABLED, troughcolor='black')
+			self.chkeveryone.config(state=DISABLED)
 		
 		r+= 1
 		w=Label(frame, text=' ', font=('',5,''))
@@ -346,7 +361,7 @@ class App:
 		
 		r += 1
 		w=Label(frame, text='wep options:', font=f0nt)
-		w.grid(row=r, column=0, sticky='W')
+		w.grid(row=r, column=0, sticky='E')
 		self.weparp=IntVar()
 		self.weparp.set(setarp)
 		w=Checkbutton(frame, text='arp-replay', variable=self.weparp, font=f0nt, activeforeground='red')
@@ -376,10 +391,10 @@ class App:
 		
 		r=r+1
 		w=Label(frame, text='packets/sec:', font=f0nt)
-		w.grid(row=r, column=0)
+		w.grid(row=r, column=0, sticky='E')
 		self.weppps=Scale(frame, orient=HORIZONTAL, from_=100, to_=1500, resolution=50, length=190, font=f0nt,\
 				troughcolor='gray', activebackground='red', relief=FLAT, sliderrelief=FLAT)
-		self.weppps.grid(row=r, column=0, columnspan=3, sticky='E')
+		self.weppps.grid(row=r, column=1, columnspan=2, sticky='W')
 		self.weppps.set(setpps)
 		
 		r+= 1
@@ -387,7 +402,7 @@ class App:
 		w.grid(row=r,columnspan=3)
 		
 		r += 1
-		w = Button(frame, text="  easy  ", font=('FreeSans', 20, 'bold'), relief=FLAT, height=2,fg="white", bg="red", \
+		w = Button(frame, text="h4x0r 1t n40", font=('FreeSans', 20, 'bold'), relief=FLAT, height=2,fg="white", bg="red", \
 				highlightbackground='white', highlightcolor='red', command=self.execute,activebackground='darkred',\
 				activeforeground='white')
 		w.grid(row=r,columnspan=3)
@@ -399,7 +414,7 @@ class App:
 		sw = root.winfo_screenwidth()
 		sh = root.winfo_screenheight()
 		w=350
-		h=510
+		h=550
 		x = sw/2 - w/2
 		y = sh/2 - h/2
 		root.geometry("%dx%d+%d+%d" % (w,h,x,y))
@@ -423,6 +438,16 @@ class App:
 			self.channel.config(state=NORMAL, troughcolor='gray')
 		else:
 			self.channel.config(state=DISABLED, troughcolor='black')
+	
+	def click_selectarg(self):
+		if self.selectarg.get() == 0:
+			self.chkeveryone.config(state=NORMAL)
+			if self.all.get() == 0:
+				self.power.config(state=NORMAL, troughcolor='gray')
+		
+		else:
+			self.power.config(state=DISABLED, troughcolor='black')
+			self.chkeveryone.config(state=DISABLED)
 	
 	def click_power(self):
 		if self.all.get() == 0:
@@ -496,12 +521,18 @@ class App:
 			cmd.append('-c')
 			cmd.append(str(self.channel.get()))
 		
-		# power
-		if self.all.get() != 0:
-			cmd.append('-all')
+		# select targets or not
+		if self.selectarg.get() == 0:
+			# don't select targets from list; either attack all or certain power range
+			# power
+			if self.all.get() != 0:
+				cmd.append('-all')
+			else:
+				cmd.append('-p')
+				cmd.append(str(self.power.get()))
 		else:
-			cmd.append('-p')
-			cmd.append(str(self.power.get()))
+			# select targets from a list... just say '-console'
+			cmd.append('-console')
 		
 		# dictionary
 		temp=self.dicttxt.get()
@@ -555,7 +586,8 @@ class App:
 		
 	
 	def doit(self, args):
-		cmd=['xterm','-bg','black','-fg','white','-T','WiFite','-geom','100x30+0+0','-hold','-e','python',THEFILE]
+		global THEFILE
+		cmd=['xterm','-bg','black','-fg','white','-T','WiFite','-geom','110x30+0+0','-hold','-e','python',THEFILE]
 		for a in args:
 			cmd.append(a)
 		print GR+'[+] '+G+'executing: '+W+ './' + THEFILE+' ' + ' '.join(args)
@@ -656,6 +688,7 @@ def update():
 		print R+'[+] ^C interrupted; aborting updater'
 	
 def upgrade():
+	global THEFILE
 	""" downloads latest version of wifite.py, saves as wifite_new.py
 		creates shell script that deletes the old wifite.py and puts the new wifite_new.py in it's place
 		changes permissions on the new wifite.py so it is executable
@@ -764,8 +797,16 @@ def main():
 		for x in ATTACK:
 			index = (x - 1)
 			if TARGETS[index][2].startswith('WPA'):
+				if WPA_MAXWAIT == 0:
+					TIME_REMAINING=0
+					break
+				
 				TIME_REMAINING+=WPA_MAXWAIT
 			elif TARGETS[index][2].startswith('WEP'):
+				if WEP_MAXWAIT == 0:
+					TIME_REMAINING=0
+					break
+				
 				if WEP_ARP:
 					TIME_REMAINING+=WEP_MAXWAIT
 				if WEP_CHOP:
@@ -775,19 +816,22 @@ def main():
 				if WEP_P0841:
 					TIME_REMAINING+=WEP_MAXWAIT
 		
-		t=sec2hms(TIME_REMAINING).split(':')
-		s=''
-		if t[0] != '0':
-			s=t[0] + ' hour'
-			if t[0] != '1':
+		if TIME_REMAINING != 0:
+			# only print estimated time remaining if no attack times are 'endless'
+			t=sec2hms(TIME_REMAINING).split(':')
+			s=''
+			if t[0] != '0':
+				s=t[0] + ' hour'
+				if t[0] != '1':
+					s+='s'
+				s+=', '
+			s+=t[1] + ' minute'
+			if t[1] != '01':
 				s+='s'
-			s+=', '
-		s+=t[1] + ' minute'
-		if t[1] != '01':
-			s+='s'
+			
+			print ''
+			print GR+'[+] '+W+'estimated maximum wait time is '+O+s+W
 		
-		print ''
-		print GR+'[+] '+W+'estimated maximum wait time is '+O+s+W
 		
 		for x in ATTACK:
 			ATTEMPTS += 1 # increment number of attempts
@@ -928,7 +972,7 @@ def handle_args(args):
 	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT, STRIP_HANDSHAKE
 	global W, BLA, R, G, O, B, P, C, GR # colors
 	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR, EXIT_IF_NO_FAKEAUTH # wep attacks
-	global REVISION
+	global REVISION, THEFILE
 	
 	# first loop, finds '-no-color' in case the user doesn't want to see any color!
 	for a in args:
@@ -1169,6 +1213,7 @@ def halp(full=False):
 	""" displays the help screen 
 		if full=True, prints the full help (detailed info)
 	"""
+	global THEFILE
 	
 	print GR+'Usage: '+W+'python '+THEFILE+' '+G+'[SETTINGS] [FILTERS]\n'
 	
@@ -1622,7 +1667,7 @@ def attack_wep_all(index):
 	global THIS_MAC, WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841
 	global AUTOCRACK, CRACKED, OLD_MAC, TEMPDIR, EXIT_IF_NO_FAKEAUTH
 	global SKIP_TO_WPA, WPA_CRACK, EXIT_PROGRAM # to exit early
-	global HAS_INTEL4965
+	global HAS_INTEL4965, THEFILE
 	
 	# to keep track of how long we are taking
 	TIME_START=time.time()
@@ -2688,7 +2733,7 @@ def gettargets():
 		if ESSID == '':
 			print GR+'[+] '+W+'waiting for targets. press '+G+'Ctrl+C'+W+' when ready\n'
 		elif ESSID == 'all' or ESSID.startswith('pow>'):
-			for i in xrange(10, 0, -1):
+			for i in xrange(20, 0, -1):
 				print GR+'\r[+] '+W+'waiting '+G+str(i)+W+' seconds for targets to appear. press '+O+'Ctrl+C'+W+' to skip the wait ',
 				sys.stdout.flush()
 				time.sleep(1)
@@ -2733,7 +2778,7 @@ def gettargets():
 				
 				if ESSID == 'all' or ESSID.startswith('pow>'):
 					# wait for 10 seconds, then start cracking
-					if time.time() - TIME_START >= 10:
+					if time.time() - TIME_START >= 15:
 						break
 				sys.stdout.flush()
 			

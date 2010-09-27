@@ -1,14 +1,13 @@
 
-[32m  .;'                     `;,    
-[32m .;'  ,;'             `;,  `;,   [0mWiFite r12
-[32m.;'  ,;'  ,;'     `;,  `;,  `;,  
-[32m::   ::   :   [37m( )[32m   :   ::   ::  [37mmass WEP/WPA cracker
-[32m':.  ':.  ':. [37m/_\[32m ,:'  ,:'  ,:'  
-[32m ':.  ':.    [37m/___\[32m    ,:'  ,:'   [37mdesigned for backtrack4
-[32m  ':.       [37m/_____\[32m      ,:'     
-[32m           [37m/       \[32m             
-[0m
-[+] colors have been neutralized :)
+  .;'                     `;,
+ .;'  ,;'             `;,  `;,   WiFite r36
+.;'  ,;'  ,;'     `;,  `;,  `;,
+::   ::   :   ( )   :   ::   ::  mass WEP/WPA cracker
+':.  ':.  ':. /_\ ,:'  ,:'  ,:'
+ ':.  ':.    /___\    ,:'  ,:'   designed for backtrack4
+  ':.       /_____\      ,:'
+           /       \
+
 Usage: python wifite.py [SETTINGS] [FILTERS]
 
   -upgrade	 download/install latest revision
@@ -18,36 +17,52 @@ Usage: python wifite.py [SETTINGS] [FILTERS]
              	 wireless interface
              	 the program automatically selects a wifi device in monitor mode
              	 prompts for input if no monitor-mode devices are found
+             	 using this switch avoids the prompt
 
   -d, --dict	     e.g. -d /pentest/passwords/wordlists/darkc0de.lst
              	 dictionary file for WPA cracking
-             	 the program will prompt for a dictionary file if any WPA targets
+             	 the program will prompt for a wordlist file if any WPA targets
              	 are selected for attack. using -d avoids this prompt
-             	 e.g. -d "none"
-             	 does not attempt to crack WPA handshakes, only captures and stores them
+             	 defaults to "wordlist.txt" found in same directory as wifite.py
+             	     e.g. -d "none"
+             	 does not attempt to crack WPA handshakes
+             	 only captures the wpa handshake and backs it up to hs/
 
   --wpa-wait	     e.g. -wpaw 15
           	 sets the maximum time to wait for a wpa handshake (in minutes)
           	 enter "0" to wait endlessly
 
+  --no-strip	 strip non-handshake packets from .cap file
+         	 uses pyrit (or tshark) to strip out unnecessary packets.
+         	 greatly reduces the size of handshkae cap files
+
   --wep-wait	     e.g. -wepw 10
           	 sets the maximum time to wait for each WEP attack.
           	 depending on the settings, this could take a long time
-          	 if the wait is "10 minutes", then EACH METHOD of attack gets 10 minutes
-          	 if you have all 4 attacks (arp, frag, chop, 0841), it would take 40 minutes
+          	 if the wait is 10 min, then EACH METHOD of attack gets 10 min
+          	 if you have all 4 WEP attacks selected, it would take 40 min
           	 enter "0" to wait endlessly
 
-  --pps			     e.g. -pps 400
-          	 packets-per-second (used only by WEP attacks) - larger pps means more ivs
-          	 however, smaller pps is recommended for weaker access points (or far-away APs)
+  --pps		     e.g. -pps 400
+          	 packets-per-second; only for WEP attacks.
+          	 more pps means more captured IVs, which means a faster crack
+          	 select smaller pps for weaker wifi cards and distant APs
 
-  --change-mac	 chanes mac address of interface to a client's mac (if found)
+  --change-mac	 changes mac address of interface to a client's mac (if found)
           	 only affects WEP-based attacks
 
-  --no-arp	 disables arp-replay attack
-  --no-chop	 disables chop-chop attack
-  --no-frag	 disables fragmentation attack
-  --no-p0841	 disables -p0841 attack
+  --no-arp	 WEP disables arp-replay attack
+  --no-chop	 WEP disables chop-chop attack
+  --no-frag	 WEP disables fragmentation attack
+  --no-p0841	 WEP disables -p0841 attack
+
+  --force-auth	 during a WEP attack: if fake-auth fails, the attack ends
+              	 most WEP attacks require fake-authentication
+              	 default is to "stay the course" and hope for more packets
+
+  --no-deauth	 disables the deauthing of clients on hidden APs
+             	 by default, wifite will deauth clients connected to hidden APs
+             	 *wifite only deauths hidden SSID clients in FIXED CHANNEL MODE*
 
   --no-color	 do not display annoying colors (use system colors)
 
@@ -55,21 +70,21 @@ Usage: python wifite.py [SETTINGS] [FILTERS]
   FILTERS
   -e, --essid	     e.g. -e "2WIRE759"
              	 essid (name) of the access point (router)
-             	 this forces a narrowed attack; no other networks will be attacked
+             	 this forces a narrow attack; no other networks will be attacked
 
   -all, --all	 target and attack all access points found
-           	 this is dangerous because most attacks require injection, and most
-           	 wireless cards cannot inject unless they are close to the router
+           	 this is dangerous because most attacks require injection,
+           	 most wifi cards cann;t inject unless they are close to the AP
 
   -p, --power	     e.g. -p 55
              	 minimum power level (dB)
-             	 this is similar to the "-e all" option, except it filters
-             	 access points that are too far away for the attacks to be useful
+             	 this is similar to the "-e all" option, except it filters APs
+             	 that are too far away for the attacks to be useful
 
   -c, --channel	     e.g. -c 6
                	 channel to scan
-               	 not using this option causes program to search all possible channels
-               	 only use -c or --channel if you know the channel you want to listen on
+               	 not using this switch defaults to all possible channels
+               	 only use -c or --channel if you know the channel to listen on
 
   --no-wpa	 ignores all WPA-encrypted networks
           	 useful when using --power or "-e all" attacks
