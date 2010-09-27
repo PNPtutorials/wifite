@@ -38,7 +38,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=39
+REVISION=40
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -246,6 +246,11 @@ class App:
 		w.grid(row=r, column=0, sticky='E')
 		self.iface = StringVar(frame)
 		(lst,default)=self.ifacelist()
+		if lst == []:
+			print GR+'[!] '+R+'no wireless adapaters found'
+			print GR+'[!] '+O+'make sure your wifi card is plugged in, then check airmon-ng'
+			sys.exit(0)
+		
 		self.iface.set(default)
 		w=apply(OptionMenu, (frame, self.iface) + tuple(lst))
 		w.config(takefocus=1, width=25, font=f0nt)
