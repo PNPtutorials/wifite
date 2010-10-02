@@ -40,7 +40,7 @@ except ImportError:
 	print '[!] Impossible d importer tkinter -- GUI d�sactiv�'
 
 # current revision
-REVISION=42
+REVISION=43
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -712,7 +712,7 @@ def upgrade():
 		exits after it is ran
 	"""
 	print GR+'[+] '+G+'Téléchargement'+W+' de la mise a jour...'
-	sock = urllib.urlopen('http://wifite.googlecode.com/svn/trunk/wifite.py')
+	sock = urllib.urlopen('http://wifite.googlecode.com/svn/trunk/fr/wifite_fr.py')
 	page = sock.read()
 	
 	if page == '':
