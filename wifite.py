@@ -39,7 +39,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=44
+REVISION=48
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -3089,8 +3089,6 @@ def sec2hms(sec):
 	result += str(s)
 	
 	return result
-
-print 'יטאש'
 
 main() # launch the main method
 subprocess.call(['rm','-rf',TEMPDIR])
