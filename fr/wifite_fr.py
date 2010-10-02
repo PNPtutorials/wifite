@@ -3,6 +3,7 @@
 
 """ WIFITE
     (c) 2010 derv merkler
+	FRENCH Translate by Matt² - September 2010
 """
 
 """ TODO LIST:
@@ -25,8 +26,8 @@ try:
 	proc_intel=None
 except ImportError:
 	# some users may nto have this module
-	print '[!] unable to import pexpect'
-	print '[!] if your chipset is intel4965; the fake-auth workaround will fail'
+	print '[!] Impossible d importer pexpect'
+	print '[!] Si vous avez un chipset intel4965; la fake-auth ne va pas fonctionner'
 
 NO_XSERVER=False
 try:
@@ -36,7 +37,7 @@ try:
 	import threading      # so the GUI doesn't lock up
 except ImportError:
 	NO_XSERVER=True
-	print '[!] unable to import tkinter -- GUI disabled'
+	print '[!] Impossible d importer tkinter -- GUI d�sactiv�'
 
 # current revision
 REVISION=42
@@ -146,7 +147,7 @@ if not NO_XSERVER:
 		# there was a glitch where a window 'Tk' would appear on ctrl+c.. this fixed it!
 	except tkinter.TclError:
 		NO_XSERVER=True
-		print R+'[!] error loading tkinter; '+O+'disabling GUI...'
+		print R+'[!] Erreur pendant le chargement de tkinter; '+O+' GUI désactivé ...'
 
 
 
@@ -247,18 +248,16 @@ class App:
 		w.grid(row=r, column=0, sticky='E')
 		self.iface = StringVar(frame)
 		(lst,default)=self.ifacelist()
-		
-		print GR+'[+] '+W+'wireless devices: "'+G+ ', '.join(lst) +W+'"'
+		print GR+'[+] '+W+'Carte Wireless: "'+G+ ', '.join(lst) +W+'"'
 		if lst == [] or len(lst) == 0:
-			print GR+'[!] '+R+'no wireless adapaters found'
-			print GR+'[!] '+O+'make sure your wifi card is plugged in, then check airmon-ng'
+			print GR+'[!] '+R+'Aucune carte Wifi n\'a été détectée'
+			print GR+'[!] '+O+'Soyez sur que votre carte wifi est bien branchée, ensuite verifiez avec airmon-ng'
 			sys.exit(0)
 		elif len(lst) == 1:
 			if lst[0].strip() == '':
-				print GR+'[!] '+R+'no wireless adapaters found'
-				print GR+'[!] '+O+'make sure your wifi card is plugged in, then check airmon-ng'
+				print GR+'[!] '+R+'Aucune carte Wifi n\'a été détectée'
+				print GR+'[!] '+O+'Soyez sur que votre carte wifi est bien branchée, ensuite verifiez avec airmon-ng'
 				sys.exit(0)
-		
 		self.iface.set(default)
 		
 		w=apply(OptionMenu, (frame, self.iface) + tuple(lst))
@@ -266,12 +265,12 @@ class App:
 		w.grid(row=r,column=1,columnspan=2, sticky='W')
 		r+=1
 		
-		w=Label(frame, font=f0nt, text='encryption type:')
+		w=Label(frame, font=f0nt, text='Type de cryptage:')
 		w.grid(row=r, column=0, sticky='E')
 		
 		self.enctype = StringVar(frame)
 		self.enctype.set(setenctype)
-		w=OptionMenu(frame, self.enctype, 'WEP', 'WPA', 'WEP and WPA')
+		w=OptionMenu(frame, self.enctype, 'WEP', 'WPA', 'WEP et WPA')
 		w.config(takefocus=1, width=15, font=f0nt)
 		w.grid(row=r,column=1, columnspan=2,sticky='W')
 		
@@ -286,7 +285,7 @@ class App:
 		self.allchan=IntVar(frame)
 		self.allchan.set(setallchan)
 		self.click_channel()
-		self.chkallchan=Checkbutton(frame, text='all channels', variable=self.allchan, command=self.click_channel, font=f0nt,\
+		self.chkallchan=Checkbutton(frame, text='tous les channels', variable=self.allchan, command=self.click_channel, font=f0nt,\
 							activeforeground='red')
 		self.chkallchan.grid(row=r, column=2, sticky='W')
 		
@@ -298,12 +297,12 @@ class App:
 		self.selectarg=IntVar(frame)
 		self.selectarg.set(setselarg)
 		
-		w=Checkbutton(frame, text='select targets from list', variable=self.selectarg, command=self.click_selectarg,\
+		w=Checkbutton(frame, text='Selectionnez la cible dans une liste', variable=self.selectarg, command=self.click_selectarg,\
 				font=f0nt, activeforeground='red')
 		w.grid(row=r, column=1, columnspan=2,sticky='W')
 		
 		r+= 1
-		w=Label(frame, text='minimum power:', font=f0nt)
+		w=Label(frame, text='Puissance min.:', font=f0nt)
 		w.grid(row=r,column=0, sticky='E')
 		self.power=Scale(frame, orient=HORIZONTAL, from_=1, to_=100, resolution=1, length=120, takefocus=1,\
 		 				troughcolor='black', sliderlength=20, relief=FLAT, sliderrelief=FLAT, font=f0nt,\
@@ -314,7 +313,7 @@ class App:
 		self.all=IntVar(frame)
 		self.all.set(setallpow)
 		self.click_power()
-		self.chkeveryone=Checkbutton(frame, text='everyone', variable=self.all, command=self.click_power, font=f0nt, activeforeground='red')
+		self.chkeveryone=Checkbutton(frame, text='Tous', variable=self.all, command=self.click_power, font=f0nt, activeforeground='red')
 		self.chkeveryone.grid(row=r, column=2, sticky='W')
 		
 		if self.selectarg.get() != 0:
@@ -326,7 +325,7 @@ class App:
 		w.grid(row=r,columnspan=3)
 		
 		r+= 1
-		w=Label(frame, text='dictionary:', font=f0nt)
+		w=Label(frame, text='Dictionnaire:', font=f0nt)
 		w.grid(row=r, column=0, sticky='E')
 		self.dict=StringVar()
 		self.dicttxt=Entry(frame, font=f0nt, width=22, textvariable=self.dict)
@@ -350,7 +349,7 @@ class App:
 		self.weptxt.insert(0, setwepw)
 		self.wepwendless=IntVar(frame)
 		self.wepwendless.set(setwependl)
-		w=Checkbutton(frame, text='endless',variable=self.wepwendless, font=f0nt, activeforeground='red',\
+		w=Checkbutton(frame, text='illimité',variable=self.wepwendless, font=f0nt, activeforeground='red',\
 					command=self.click_wependless)
 		w.grid(row=r, column=1, sticky='E')
 		self.click_wependless()
@@ -365,7 +364,7 @@ class App:
 		self.wpatxt.insert(0, setwpaw)
 		self.wpawendless=IntVar(frame)
 		self.wpawendless.set(setwpaendl)
-		w=Checkbutton(frame, text='endless',variable=self.wpawendless, font=f0nt, activeforeground='red',\
+		w=Checkbutton(frame, text='illimité',variable=self.wpawendless, font=f0nt, activeforeground='red',\
 					command=self.click_wpaendless)
 		w.grid(row=r, column=1, sticky='E')
 		self.click_wpaendless()
@@ -375,7 +374,7 @@ class App:
 		w.grid(row=r,columnspan=3)
 		
 		r += 1
-		w=Label(frame, text='wep options:', font=f0nt)
+		w=Label(frame, text='Options wep:', font=f0nt)
 		w.grid(row=r, column=0, sticky='E')
 		self.weparp=IntVar()
 		self.weparp.set(setarp)
@@ -401,11 +400,11 @@ class App:
 		w.grid(row=r,column=1, sticky='W')
 		self.wepauth=IntVar()
 		self.wepauth.set(setauth)
-		w=Checkbutton(frame, text='ignore fake-auth', variable=self.wepauth, font=f0nt, activeforeground='red')
+		w=Checkbutton(frame, text='ignorer fake-auth', variable=self.wepauth, font=f0nt, activeforeground='red')
 		w.grid(row=r,column=1, columnspan=2, sticky='E')
 		
 		r=r+1
-		w=Label(frame, text='packets/sec:', font=f0nt)
+		w=Label(frame, text='paquets/sec:', font=f0nt)
 		w.grid(row=r, column=0, sticky='E')
 		self.weppps=Scale(frame, orient=HORIZONTAL, from_=100, to_=1500, resolution=50, length=190, font=f0nt,\
 				troughcolor='gray', activebackground='red', relief=FLAT, sliderrelief=FLAT)
@@ -417,7 +416,7 @@ class App:
 		w.grid(row=r,columnspan=3)
 		
 		r += 1
-		w = Button(frame, text="h4x0r 1t n40", font=('FreeSans', 20, 'bold'), relief=FLAT, height=2,fg="white", bg="red", \
+		w = Button(frame, text="Cr4ck t0ut !", font=('FreeSans', 20, 'bold'), relief=FLAT, height=2,fg="white", bg="red", \
 				highlightbackground='white', highlightcolor='red', command=self.execute,activebackground='darkred',\
 				activeforeground='white')
 		w.grid(row=r,columnspan=3)
@@ -471,7 +470,7 @@ class App:
 			self.power.config(state=DISABLED, troughcolor='black')
 	
 	def lookup(self):
-		file=tkFileDialog.askopenfile(parent=root, mode='rb',title='select a passwordlist')
+		file=tkFileDialog.askopenfile(parent=root, mode='rb',title='Sélectionne une liste de mot de passe')
 		if file != None:
 			self.dicttxt.delete(0, END)
 			self.dicttxt.insert(0, file.name)
@@ -509,9 +508,9 @@ class App:
 				break
 		
 		if len(lst) == 0:
-			print R+'[!] no wireless interfaces were found!'
-			print R+'[!] run airmon-ng; check your wireless drivers'
-			print GR+'[+] '+O+'the program will now exit'+W
+			print R+'[!] Aucun reseau wifi n\'a ete trouvé!'
+			print R+'[!] Lancez airmon-ng et vérifiez vos drivers wireless'
+			print GR+'[+] '+O+'Le programme va maintenant s\'arreter'+W
 			sys.exit(0)
 		
 		return lst, default
@@ -605,7 +604,7 @@ class App:
 		cmd=['xterm','-bg','black','-fg','white','-T','WiFite','-geom','110x30+0+0','-hold','-e','python',THEFILE]
 		for a in args:
 			cmd.append(a)
-		print GR+'[+] '+G+'executing: '+W+ './' + THEFILE+' ' + ' '.join(args)
+		print GR+'[+] '+G+'Exécution: '+W+ './' + THEFILE+' ' + ' '.join(args)
 		try:
 			subprocess.call(cmd)
 		except AttributeError:
@@ -630,7 +629,7 @@ def get_revision():
 	desc =''
 	since=''
 	
-	sock = urllib.urlopen('http://code.google.com/p/wifite/source/list?path=/trunk/wifite.py')
+	sock = urllib.urlopen('http://code.google.com/p/wifite/source/list?path=/trunk/fr/wifite_fr.py')
 	page = sock.read()
 	
 	# get the revision
@@ -643,7 +642,7 @@ def get_revision():
 			irev=int(rev)
 		except ValueError:
 			rev=rev.split('\n')[0]
-			print R+'[+] invalid revision number: "'+rev+'"'
+			print R+'[+] Numéro de révision invalide: "'+rev+'"'
 	
 	# get the description
 	start= page.find(' href="detail?r='+str(irev)+'', start + 3)
@@ -676,33 +675,33 @@ def update():
 	global REVISION
 	
 	try:
-		print GR+'[+] '+W+'checking for updates...'
+		print GR+'[+] '+W+'Vérification des mises a jour...'
 		
 		r,d,t=get_revision()
 		
 		r=int(r)
 		if r == -1:
-			print GR+'[+] '+R+'unable to access code.google.com; aborting update'
+			print GR+'[+] '+R+'Impossible d\'acceder a code.google.com; mise à jour annulée'
 		
 		elif r > REVISION:
-			print GR+'[+] '+W+'there is a '+G+'new version'+W+' of wifite.py! (r'+str(r)+')'
-			print GR+'[+] '+W+'changes:'+W
+			print GR+'[+] '+W+'C\'est la '+G+'nouvelle version'+W+' de wifite.py! (r'+str(r)+')'
+			print GR+'[+] '+W+'changements:'+W
 			print GR+'    -'+d.replace('\n','\n    -')
-			print GR+'[+] '+W+'updated '+G+t+W+'\n'
-			print GR+'[+] '+W+'do you want to '+G+'download and upgrade'+W+' wifite.py? (y/n): '
+			print GR+'[+] '+W+'Mise a jour OK '+G+t+W+'\n'
+			print GR+'[+] '+W+'Voulez vous '+G+'télécharger et mettre à jour'+W+' wifite.py? (y/n): '
 			ans=raw_input()
 			if ans.lower()[0] == 'y':
 				upgrade()
 			else:
-				print GR+'[+] '+W+'upgrading '+O+'aborted'+W+''
+				print GR+'[+] '+W+'Mise à jour '+O+'annulée'+W+''
 		
 		elif r == REVISION:
-			print GR+'[+] '+W+'your copy of wifite.py is '+G+'up to date'
+			print GR+'[+] '+W+'Votre version de wifite.py est '+G+'à jour'
 		
 		else:
-			print GR+'[+] '+W+'you somehow have a '+G+'futuristic revision'+W+' of wifite.py'
+			print GR+'[+] '+W+'Vous avez en quelques sorte une '+G+'révision futuriste'+W+' de wifite.py'
 	except KeyboardInterrupt:
-		print R+'[+] ^C interrupted; aborting updater'
+		print R+'[+] ^C Interrompu; Mise à jour annulée'
 	
 def upgrade():
 	global THEFILE
@@ -712,12 +711,12 @@ def upgrade():
 		also, it lets the user know what is happening
 		exits after it is ran
 	"""
-	print GR+'[+] '+G+'downloading'+W+' update...'
+	print GR+'[+] '+G+'Téléchargement'+W+' de la mise a jour...'
 	sock = urllib.urlopen('http://wifite.googlecode.com/svn/trunk/wifite.py')
 	page = sock.read()
 	
 	if page == '':
-		print R+'[+] unable to download script; exiting'
+		print R+'[+] Impossible de télécharger wifite.py; Exit'
 		return
 	
 	# create/save the new script
@@ -742,7 +741,7 @@ def upgrade():
 	
 	subprocess.call(['sh','update_wifite.sh'])
 	
-	print GR+'[+] '+G+'updated!'+W+' type "./'+THEFILE+'" to run again'
+	print GR+'[+] '+G+'Mis à jour!'+W+' tapez "./'+THEFILE+'" pour relancer'
 
 
 ############################################################################### main
@@ -760,9 +759,9 @@ def main():
 		banner()
 		
 		if not check_root():
-			print R+'[+] must be run as '+O+'root'+O+'!'
-			print R+'[+] type '+O+'su'+R+' to login as root'
-			print R+'[+] the program will now exit'
+			print R+'[+] Vous devez être '+O+'root'+O+'!'
+			print R+'[+] Tapez '+O+'su'+R+' pour vous connecter en root'
+			print R+'[+] Le programme va s\'arreter'
 			print W
 			return
 		
@@ -776,7 +775,7 @@ def main():
 			# no arguments; run the GUI
 			root.title('WiFite GUI')
 			
-			print GR+'[+] '+W+'launching '+G+'gui interface'+W
+			print GR+'[+] '+W+'Démarrage de l\''+G+'interface GUI'+W
 			app = App(root)
 			app
 			
@@ -847,7 +846,7 @@ def main():
 				s+='s'
 			
 			print ''
-			print GR+'[+] '+W+'estimated maximum wait time is '+O+s+W
+			print GR+'[+] '+W+'Le temps d\'attente maximum est estimé à '+O+s+W
 		
 		
 		for x in ATTACK:
@@ -880,20 +879,20 @@ def main():
 		# these if statements are for colors and plural fixing.
 		# could've just done a one-liner, but this looks prettier
 		if len(ATTACK) == 1:
-			print GR+'[+] '+W+'attack is '+W+'complete'+W+':',
+			print GR+'[+] '+W+'L\'attaque est '+W+'finie'+W+':',
 		else:
-			print GR+'[+] '+W+'attacks are '+W+'complete'+W+':',
+			print GR+'[+] '+W+'Les attaques sont '+W+'finies'+W+':',
 			if ATTEMPTS==1:
-				print O+'1 attempt,',
+				print O+'1 tentative,',
 			else:
-				print O+str(ATTEMPTS) + ' attempts,',
+				print O+str(ATTEMPTS) + ' tentatives,',
 		
 		if had_wpa:
 			# only print handshakes if we cracked or targetted a WPA network
 			extra=''
 			temp=len(WPA_CRACK) - HANDSHAKES
 			if temp > 0:
-				extra=O+' ('+str(temp)+' pre-captured)'+W
+				extra=O+' ('+str(temp)+' pré-capturé)'+W
 			
 			if HANDSHAKES==0:
 				print R+str(HANDSHAKES)+' handshakes'+W+extra+',',
@@ -905,25 +904,25 @@ def main():
 			if DICT != '':
 				# only display amount cracked if user specified a dictionary
 				if CRACKED == 0:
-					print R+str(CRACKED)+' cracked'+W
+					print R+str(CRACKED)+' crackée'+W
 				else:
-					print G+str(CRACKED)+' cracked'+W
+					print G+str(CRACKED)+' crackée'+W
 		else:
 			# only targeted WEP network(s), only display attempted/cracked (not handshakes)
 			if CRACKED == 0:
-				print R+str(CRACKED)+' cracked'+W
+				print R+str(CRACKED)+' crackée'+W
 			else:
-				print G+str(CRACKED)+' cracked'+W
+				print G+str(CRACKED)+' crackée'+W
 		
 		# display the log
 		if len(THE_LOG) > 0:
-			print GR+'[+] '+G+'session summary:'+W
+			print GR+'[+] '+G+'Résumé de la session:'+W
 			for i in THE_LOG:
 				print GR+'    -'+i
 			print W
 		
 	except KeyboardInterrupt:
-		print GR+'\n[!] '+O+'^C interrupt received, '+R+'exiting'+W
+		print GR+'\n[!] '+O+'^C Reception , '+R+'exit'+W
 
 ############################################################################### aircrack warning
 def aircrack_warning():
@@ -945,9 +944,9 @@ def aircrack_warning():
 		rec=rec[:len(rec)-1]
 	
 	if req != '':
-		print GR+'[+] '+O+'WARNING:'+W+' '+G+'required'+W+' packages/apps were not found:'+W+req
+		print GR+'[+] '+O+'ATTENTION:'+W+' des applications/packages '+G+'requis'+W+' n ont pas été trouvé:'+W+req
 	if rec != '':
-		print GR+'[+] '+O+'WARNING:'+W+' '+G+'recommended'+W+' packages/apps were not found'+W+rec
+		print GR+'[+] '+O+'ATTENTION:'+W+' des applications/packages '+G+'recommandés'+W+' n ont pas été trouvé'+W+rec
 
 ############################################################################### intel 4965 check
 def check_intel():
@@ -955,7 +954,7 @@ def check_intel():
 	out = subprocess.Popen(['airmon-ng'],stdout=subprocess.PIPE,stderr=open(os.devnull,'w')).communicate()[0]
 	for line in out.split('\n'):
 		if line.find(IFACE) != -1 and line.find('Intel 4965') != -1:
-			print GR+'[+] '+W+'intel4965 chipset '+G+'detected'+W+'\n'
+			print GR+'[+] '+W+'chipset intel4965'+G+'détecté'+W+'\n'
 			HAS_INTEL4965=True
 			return
 	
@@ -967,11 +966,11 @@ def banner():
 	""" displays the pretty app logo + text  """
 	print ''
 	print G+"  .;'                     `;,    "
-	print G+" .;'  ,;'             `;,  `;,   "+W+"WiFite r"+str(REVISION)
+	print G+" .;'  ,;'             `;,  `;,   "+W+"WiFite r"+str(REVISION)+W+" - FR -"
 	print G+".;'  ,;'  ,;'     `;,  `;,  `;,  "
-	print G+"::   ::   :   "+GR+"( )"+G+"   :   ::   ::  "+GR+"mass WEP/WPA cracker"
+	print G+"::   ::   :   "+GR+"( )"+G+"   :   ::   ::  "+GR+"Crack de Wep/Wpa massif"
 	print G+"':.  ':.  ':. "+GR+"/_\\"+G+" ,:'  ,:'  ,:'  "
-	print G+" ':.  ':.    "+GR+"/___\\"+G+"    ,:'  ,:'   "+GR+"designed for backtrack4"
+	print G+" ':.  ':.    "+GR+"/___\\"+G+"    ,:'  ,:'   "+GR+"Conçu pour backtrack4"
 	print G+"  ':.       "+GR+"/_____\\"+G+"      ,:'     "
 	print G+"           "+GR+"/       \\"+G+"             "
 	print W
@@ -1005,7 +1004,7 @@ def handle_args(args):
 			P  = ""
 			C  = ""
 			GR = ""
-			print '[+] colors have been neutralized :)\n'
+			print '[+] Les couleurs ont été neutralisées :)\n'
 			break
 	
 	# second loop, look for 'help' or 'upgrade' because these are single-servin arguments
@@ -1027,8 +1026,8 @@ def handle_args(args):
 			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 		elif a == '-v' or a == '-version' or a == '-V' or a == '--version' or a == 'version':
-			print GR+'[+] '+W+'current wifite revision: '+G+'r'+str(REVISION)+W
-			print GR+'[+] '+W+'run '+G+'./wifite.py -upgrade'+W+' to check for latest version'
+			print GR+'[+] '+W+'La révision actuelle de wifite est: '+G+'r'+str(REVISION)+W
+			print GR+'[+] '+W+'Lancez '+G+'./wifite.py -upgrade'+W+' pour vérifier les mises à jour'
 			sys.exit(0)
 			
 	
@@ -1040,10 +1039,10 @@ def handle_args(args):
 		if a == '-i' or a == '--iface':
 			try:
 				IFACE=args[i+1]
-				print GR+'[+] '+W+'using wireless interface "'+G + IFACE + W+'"'
+				print GR+'[+] '+W+'Interface wireless utilisée: "'+G + IFACE + W+'"'
 			except IndexError:
-				print R+'[!] error! invalid argument format'
-				print R+'[!] the program will now exit'
+				print R+'[!] Erreur! Argument invalide'
+				print R+'[!] Le programme va se fermer'
 				print W
 				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
@@ -1053,10 +1052,10 @@ def handle_args(args):
 		elif a == '-c' or a == '--chan':
 			try:
 				CHANNEL=args[i+1]
-				print GR+'[+] '+W+'only looking for networks on "'+G + CHANNEL + W+'"'
+				print GR+'[+] '+W+'Scan uniquement les reseaux sur "'+G + CHANNEL + W+'"'
 			except IndexError:
-				print R+'[!] error! invalid argument format'
-				print R+'[!] the program will now exit'
+				print R+'[!] Erreur! Argument invalide'
+				print R+'[!] Le programme va se fermer'
 				print W
 				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
@@ -1067,13 +1066,13 @@ def handle_args(args):
 				ESSID=args[i+1]
 				if ESSID.lower() == 'all' or ESSID.lower() == '"all"':
 					if ESSID.startswith('pow>'):
-						print O+'[!] already targeting essids with power greater than '+ESSID[4:]+'dB'+W
+						print O+'[!] ESSIDS déja ciblés avec une puissance supérieure à '+ESSID[4:]+'dB'+W
 					else:
 						ESSID = 'all'
-						print GR+'[+] '+W+'targeting essid "'+G + ESSID + W+'"'
+						print GR+'[+] '+W+'Ciblage essid "'+G + ESSID + W+'"'
 			except IndexError:
-				print R+'[!] error! invalid argument format'
-				print R+'[!] the program will now exit'
+				print R+'[!] Erreur! Argument invalide'
+				print R+'[!] Le programme va se fermer'
 				print W
 				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
@@ -1081,63 +1080,63 @@ def handle_args(args):
 			
 		elif a == '-all' or a == '--all':
 			if ESSID.startswith('pow>'):
-				print O+'[!] already targeting essids with power greater than '+ESSID[4:]+'dB'+W
+				print O+'[!] ESSIDS déja ciblés avec une puissance suppérieure à '+ESSID[4:]+'dB'+W
 			else:
 				ESSID = 'all'
-				print GR+'[+] '+W+'targeting essid "'+G + ESSID + W+'"'
+				print GR+'[+] '+W+'Ciblage essid "'+G + ESSID + W+'"'
 			
 		elif a == '-p' or a == '--power':
 			try:
 				tempint=int(args[i+1])
 			except IndexError:
-				print R+'[!] error! invalid argument format'
-				print R+'[!] the program will now exit'
+				print R+'[!] Erreur! Argument invalide'
+				print R+'[!] Le programme va se fermer'
 				print W
 				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			except ValueError:
-				print R+'[!] invalid power level!'
-				print R+'[!] enter -e pow>## where ## is a 1 or 2 digit number'
-				print R+'[!] example: ./'+THEFILE+' -e pow>55'
+				print R+'[!] Puissance invalide!'
+				print R+'[!] Entrez -e pow>## où ## est un nombre de 1 - 2 chiffres'
+				print R+'[!] exemple: ./'+THEFILE+' -e pow>55'
 				print W
 				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			
-			print GR+'[+] '+W+'targeting networks with signal power greater than '+G+ str(tempint)+'dB'+W
+			print GR+'[+] '+W+'Ciblage des reseaux avec un signal de puissance suppérieure à '+G+ str(tempint)+'dB'+W
 			ESSID='pow>'+str(tempint)
 			
 		elif a == '-d' or a == '--dict' or a == '-dict':
 			try:
 				DICT=args[i+1]
-				print GR+'[+] '+W+'using dictionary "'+G + DICT + W+'"'
+				print GR+'[+] '+W+'Utilisation du dictionnaire "'+G + DICT + W+'"'
 			except IndexError:
-				print R+'[!] error! invalid argument format'
-				print R+'[!] the program will now exit'
+				print R+'[!] Erreur! Argument invalide'
+				print R+'[!] Le programme va se fermer'
 				print W
 				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			i+=1
 			
 		elif a == '-nowpa' or a == '--no-wpa':
-			print GR+'[+] '+W+'only scanning for '+G+'WEP-encrypted networks'+W
+			print GR+'[+] '+W+'Scan uniquement pour '+G+'Réseaux cryptés WEP'+W
 			WPA=False
 			
 		elif a == '-nowep' or a == '--no-wep':
-			print GR+'[+] '+W+'only scanning for '+G+'WPA-encrypted networks'+W
+			print GR+'[+] '+W+'Scan uniquement pour '+G+'Réseaux cryptés WPA'+W
 			WEP=False
 		
 		elif a == '-wpaw' or a == '--wpa-wait':
 			try:
 				WPA_MAXWAIT=int(args[i+1])*60
-				print GR+'[+] '+W+'set wpa handshake wait time:',
+				print GR+'[+] '+W+'Temps d\'attente WPA:',
 				if WPA_MAXWAIT == 0:
-					print G+'unlimited'
+					print G+'Illimité'
 				else:
 					print G+str(WPA_MAXWAIT/60)+' minutes'
 				
 			except Exception:
-				print R+'[!] error! invalid arguments'
-				print R+'[!] the program will now exit'
+				print R+'[!] Erreur! Argument invalide'
+				print R+'[!] Le programme va se fermer'
 				print W
 				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
@@ -1146,14 +1145,14 @@ def handle_args(args):
 		elif a == '-wepw' or a == '--wep-wait':
 			try:
 				WEP_MAXWAIT=int(args[i+1])*60
-				print GR+'[+] '+W+'set wep attack wait time:',
+				print GR+'[+] '+W+'Temps d\'attente WEP:',
 				if WEP_MAXWAIT == 0:
-					print G+'unlimited'
+					print G+'Illimité'
 				else:
 					print G+str(WEP_MAXWAIT/60)+' minutes'
 			except Exception:
-				print R+'[!] error! invalid arguments'
-				print R+'[!] the program will now exit'
+				print R+'[!] Erreur! Argument invalide'
+				print R+'[!] Le programme va se fermer'
 				print W
 				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
@@ -1162,10 +1161,10 @@ def handle_args(args):
 		elif a == '-pps' or a == '--pps':
 			try:
 				WEP_PPS=int(args[i+1])
-				print GR+'[+] '+W+'set WEP replay pps: '+G+str(WEP_PPS)+'/sec'
+				print GR+'[+] '+W+'Nombres de paquets WEP replay: '+G+str(WEP_PPS)+'/sec'
 			except Exception:
-				print R+'[!] error! invalid arguments'
-				print R+'[!] the program will now exit'
+				print R+'[!] Erreur! Argument invalide'
+				print R+'[!] Le programme va se fermer'
 				print W
 				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
@@ -1173,49 +1172,49 @@ def handle_args(args):
 		
 		elif a == '-keepmac' or a == '--keep-mac':
 			CHANGE_MAC=False
-			print GR+'[+] '+W+'change mac to WEP client '+O+'disabled'+W
+			print GR+'[+] '+W+'Changement de votre MAC '+O+'Désactivé'+W
 			
 		elif a == '-mac' or a == '--change-mac':
 			# keep this here, for the old-school users that still use '-mac' option
-			print GR+'[+] '+W+'change mac to WEP client '+G+'enabled'+W
+			print GR+'[+] '+W+'Changement de votre MAC '+G+'Activé'+W
 		
 		elif a == '-noarp' or a == '--no-arp':
 			WEP_ARP=False
-			print GR+'[+] '+W+'arp-replay attack '+G+'disabled'+W
+			print GR+'[+] '+W+'Attaque arp-replay '+G+'Désactivée'+W
 		
 		elif a == '-nochop' or a == '--no-chop':
 			WEP_CHOP=False
-			print GR+'[+] '+W+'chop-chop attack '+G+'disabled'+W
+			print GR+'[+] '+W+'Attaque chop-chop '+G+'Désactivée'+W
 		
 		elif a == '-nofrag' or a == '--no-frag':
 			WEP_FRAG=False
-			print GR+'[+] '+W+'fragmentation attack '+G+'disabled'+W
+			print GR+'[+] '+W+'Attaque par fragmentation '+G+'Désactivée'+W
 		
 		elif a == '-no0841' or a == '--no-p0841':
 			WEP_P0841=False
-			print GR+'[+] '+W+'-p 0841 attack '+G+'disabled'+W
+			print GR+'[+] '+W+'Attaque -p 0841 '+G+'Désactivée'+W
 		
 		elif a == '-console' or a == '--console':
-			print GR+'[+] '+G+'console mode'+W+' activated'
+			print GR+'[+] '+G+'mode console'+W+' Activée'
 		
 		elif a == '-f' or a == '--force-fake':
-			print GR+'[+] '+W+'continue WEP attack despite fake-auth failure '+O+'enabled'+W+''
+			print GR+'[+] '+W+'Continuez l\'attaque WEP si la fake-auth échoue '+O+'Activé'+W+''
 			EXIT_IF_NO_FAKEAUTH=False
 		
 		elif a == '-nod' or a == '--no-deauth':
-			print GR+'[+] '+W+'deauthentication of hidden networks '+O+'disabled'+W+''
+			print GR+'[+] '+W+'Désauthentification des réseaux cachés '+O+'Désactivé'+W+''
 			NO_HIDDEN_DEAUTH=True
 			
 		elif a == '-nostrip' or a == '--no-strip':
-			print GR+'[+] '+W+'wpa handshake stripping '+O+'disabled'+W+''
+			print GR+'[+] '+W+'Découpage du handshake WPA '+O+'Désactivé'+W+''
 			STRIP_HANDSHAKE=False
 			
 		i += 1
 		
 	if WEP==False and WPA==False:
-		print R+'[!] error! both WPA and WEP are diabled!'
-		print R+'[!] those are the only two kinds of networks this program can attack'
-		print R+'[!] program will exit now'
+		print R+'[!] Erreur, WEP ET WPA sont desactives!'
+		print R+'[!] Ce sont les seuls catégories de réseaux que l\'ont peux cracker'
+		print R+'[!] Le programme va se fermer'
 		print W
 		subprocess.call(['rm','-rf',TEMPDIR])
 		sys.exit(0)
@@ -1236,154 +1235,154 @@ def halp(full=False):
 	"""
 	global THEFILE
 	
-	print GR+'Usage: '+W+'python '+THEFILE+' '+G+'[SETTINGS] [FILTERS]\n'
+	print GR+'Usage: '+W+'python '+THEFILE+' '+G+'[Options] [Filtres]\n'
 	
 	if not full:
-		print G+'  -help    '+GR+'display the full help screen\n'
-		print G+'  -console '+GR+'console/interactive mode (non-GUI)\n'
-		print G+'  -upgrade '+GR+'download/install latest revision\n'
+		print G+'  -help    '+GR+'Affiche l aide compléte\n'
+		print G+'  -console '+GR+'Mode Console (non-GUI)\n'
+		print G+'  -upgrade '+GR+'Telecharger et Installer la derniere version\n'
 	else:
-		print G+'  -upgrade\t '+GR+'download/install latest revision\n'
+		print G+'  -upgrade\t '+GR+'Telecharger et Installer la derniere version\n'
 	
 	print GR+'  SETTINGS'
 	#IFACE
 	if full:
-		print G+'  -i, --iface\t'+GR+'     e.g. -i wlan0'
-		print '             \t wireless interface'
-		print '             \t the program automatically selects a wifi device in monitor mode'
-		print '             \t prompts for input if no monitor-mode devices are found'
-		print '             \t using this switch avoids the prompt\n'
+		print G+'  -i, --iface\t'+GR+'     ex. -i wlan0'
+		print '             \t Interface wireless'
+		print '             \t Le programme selectionne automatiquement l interface en mode moniteur'
+		print '             \t Entrez manuellement le nom de votre interface si elle n est pas trouvée automatiquement'
+		print '             \t Si il ne la trouve pas automatiquement, il va la demander\n'
 	else:
-		print G+'  -i\t   '+GR+'wireless interface'
+		print G+'  -i\t   '+GR+'Interface wireless'
 	#DICT
 	if full:
-		print G+'  -d, --dict\t'+GR+'     e.g. -d /pentest/passwords/wordlists/darkc0de.lst'
-		print '             \t dictionary file for WPA cracking'
-		print '             \t the program will prompt for a wordlist file if any WPA targets'
-		print '             \t are selected for attack. using -d avoids this prompt'
-		print '             \t defaults to "wordlist.txt" found in same directory as wifite.py'
-		print '             \t     e.g. -d "none"'
-		print '             \t does not attempt to crack WPA handshakes'
-		print '             \t only captures the wpa handshake and backs it up to hs/\n'
+		print G+'  -d, --dict\t'+GR+'     ex. -d /pentest/passwords/wordlists/darkc0de.lst'
+		print '             \t Fichier dictionnaire pour le crack du WPA'
+		print '             \t Le programme va le demander si tu ne l\'a pas précisé'
+		print '             \t Utilisez -d pour rentrer directement le chemin du fichier'
+		print '             \t Par défaut, il va aussi chercher "wordlis.txt" dans le meme dossier que wifite.py'
+		print '             \t Si vous ne voulez pas cracker le handshake: -d "none"'
+		print '             \t Wifite ne va pas essayer de cracker le handshake'
+		print '             \t Il va le juste le capturer/\n'
 	else:
-		print G+'  -d\t   '+GR+'dictionary file, for WPA handshake cracking'
+		print G+'  -d\t   '+GR+'Fichier dictionnaire, pour le crack WPA'
 	#WPAWAIT
 	if full:
-		print G+'  --wpa-wait\t'+GR+'     e.g. -wpaw 15'
-		print '          \t sets the maximum time to wait for a wpa handshake (in minutes)'
-		print '          \t enter "0" to wait endlessly\n'
+		print G+'  --wpa-wait\t'+GR+'     ex. -wpaw 15'
+		print '          \t Défini le temps maximum d\'attente pour le handshake WPA (en minutes)'
+		print '          \t Entrez "0" pour illimité\n'
 	else:
-		print G+'  -wpaw\t   '+GR+'time to wait for wpa handshake (in minutes)'
+		print G+'  -wpaw\t   '+GR+'Temps maximum d\'attente pour le handshake WPA (en minutes)'
 	# handshake strip
 	if full:
-		print G+'  --no-strip\t'+GR+' strip non-handshake packets from .cap file'
-		print '         \t uses pyrit (or tshark) to strip out unnecessary packets.'
-		print '         \t greatly reduces the size of handshkae cap files\n'
+		print G+'  --no-strip\t'+GR+' Enleve les packets non-handshake du fichier .cap'
+		print '         \t Utilise pyrit (ou tshark) pour enlever les packets inutile'
+		print '         \t Reduit la taille du fichier .cap\n'
 	else:
-		print G+'  -nostrip '+GR+'strip WPA handshake from cap files (reduce .cap size)'
+		print G+'  -nostrip '+GR+'Sort le handshake WPA des fichiers de capture (reduit la taille du fichier .cap)'
 	#WEPWAIT
 	if full:
-		print G+'  --wep-wait\t'+GR+'     e.g. -wepw 10'
-		print '          \t sets the maximum time to wait for each WEP attack.'
-		print '          \t depending on the settings, this could take a long time'
-		print '          \t if the wait is 10 min, then EACH METHOD of attack gets 10 min'
-		print '          \t if you have all 4 WEP attacks selected, it would take 40 min'
-		print '          \t enter "0" to wait endlessly\n'
+		print G+'  --wep-wait\t'+GR+'     ex. -wepw 10'
+		print '          \t Défini le temps maximum d\'attente pour chaque attaque WEP.'
+		print '          \t Dépend des paramétres, ça peux prendre du temps'
+		print '          \t si le temps est 10min, chaque methode de crack prendra 10 min'
+		print '          \t si vous avez 4 attaques WEP sélectionnée, ça peux prendre 40 min'
+		print '          \t Entrez "0" pour illimité\n'
 	else:
-		print G+'  -wepw\t   '+GR+'max time (in minutes) to capture/crack WEP key of each access point'
+		print G+'  -wepw\t   '+GR+'Temps maximum (en minutes) pour capturer/cracker la clé WEP de chaque réseau'
 	#PPS
 	if full:
-		print G+'  --pps\t\t'+GR+'     e.g. -pps 400'
-		print '          \t packets-per-second; only for WEP attacks.'
-		print '          \t more pps means more captured IVs, which means a faster crack'
-		print '          \t select smaller pps for weaker wifi cards and distant APs\n'
+		print G+'  --pps\t\t'+GR+'     ex. -pps 400'
+		print '          \t Paquets Par Secondes; uniquement pour les attaques WEP.'
+		print '          \t Plus de PPS = plus de IVs capturés, Ce qui veux dire un crack plus rapide'
+		print '          \t Choisisez un petit PPS pour un réseau faible ou éloigné\n'
 	else:
-		print G+'  -pps\t   '+GR+'packets-per-second (for WEP replay attacks)'
+		print G+'  -pps\t   '+GR+'Paquets Par Secondes (uniquement attaques WEP)'
 	#(don't) CHANGE_MAC
 	if full:
-		print G+'  --keep-mac\t'+GR+' do not change MAC address of wireless interface\n'
+		print G+'  --keep-mac\t'+GR+' Ne pas changer l\'addresse MAC de votre interface wireless\n'
 	else:
-		print G+'  -keepmac '+GR+'do NOT change mac address of wireless interface'
+		print G+'  -keepmac '+GR+'NE PAS changer l\'adresse MAC de votre interface wireless'
 	#wep: no-attack
 	if full:
-		print G+'  --no-arp\t'+GR+' WEP disables arp-replay attack'
-		print G+'  --no-chop\t'+GR+' WEP disables chop-chop attack'
-		print G+'  --no-frag\t'+GR+' WEP disables fragmentation attack'
-		print G+'  --no-p0841\t'+GR+' WEP disables -p0841 attack\n'
+		print G+'  --no-arp\t'+GR+' Désactive les attaques WEP arp-replay'
+		print G+'  --no-chop\t'+GR+' Désactive les attaques WEP chop-chop'
+		print G+'  --no-frag\t'+GR+' Désactive les attaques WEP par fragmentation'
+		print G+'  --no-p0841\t'+GR+' Désactive les attaques WEP -p0841\n'
 	else:
-		print G+'  -noarp   '+GR+'disables arp-replay attack'
-		print G+'  -nochop  '+GR+'disables fragmentation attack'
-		print G+'  -nofrag  '+GR+'disables chop-chop attack'
-		print G+'  -no0841  '+GR+'disables -p0841 attack'
+		print G+'  -noarp   '+GR+'Désactive les attaques arp-replay'
+		print G+'  -nochop  '+GR+'Désactive les attaques chop-chop'
+		print G+'  -nofrag  '+GR+'Désactive les attaques fragmentation'
+		print G+'  -no0841  '+GR+'Désactive les attaques -p0841'
 	#WEP FORCE FAKE-AUTH (cancels attack if failed)
 	if full:
-		print G+'  --force-fake\t '+GR+'during a WEP attack, if fake-auth fails, keep going'
-		print   '              \t most WEP attacks require fake-authentication'
-		print   '              \t the default is to stop the attack when fake-auth fails\n'
+		print G+'  --force-fake\t '+GR+'Pendant une attaque WEP, si la fake-auth échoue, forcer à continuer'
+		print   '              \t avec les attaques fake-authentication'
+		print   '              \t Par default il stop l\'attaque quand la fake-auth échoue\n'
 	else:
-		print G+'  -f       '+GR+'force WEP attacks to continue if fake-authentication fails'
+		print G+'  -f       '+GR+'Force les attaques WEP a continuer si la fake-auth échoue'
 	# SSID DEAUTH
 	if full:
 		#-nod --no-deauth
-		print G+'  --no-deauth\t '+GR+'disables the deauthing of clients on hidden APs'
-		print   '             \t by default, wifite will deauth clients connected to hidden APs'
-		print   '             \t *wifite only deauths hidden SSID clients in FIXED CHANNEL MODE*\n'
+		print G+'  --no-deauth\t '+GR+'Désactive la déconnexion des clients sur les réseaux cachés'
+		print   '             \t par défault, wifite va déconnecter les clients connectés sur un réseau caché'
+		print   '             \t *wifite déconnecte les clients sur un SSID caché en MODE CHANNEL FIXE*\n'
 	else:
-		print G+'  -nod     '+GR+'do not deauth hidden SSIDs while scanning on a fixed channel'
+		print G+'  -nod     '+GR+'Ne pas déconnecter les SSID caché pendant le scan d\'un channel fixe'
 	#NO COLORS
 	if full:
-		print G+'  --no-color\t '+GR+'do not display annoying colors (use system colors)\n'
+		print G+'  --no-color\t '+GR+'Ne pas afficher les couleurs agaçantes (utilise les couleurs systeme)\n'
 	else:
-		print G+'  -nocolor '+GR+'do not use colored text (use system colors)'
+		print G+'  -nocolor '+GR+'Ne pas utiliser du texte coloré (utilise les couleurs systeme)'
 	
 	
 	print GR+'\n  FILTERS'
 	#ESSID
 	if full:
-		print G+'  -e, --essid\t'+GR+'     e.g. -e "2WIRE759"'
-		print '             \t essid (name) of the access point (router)'
-		print '             \t this forces a narrow attack; no other networks will be attacked\n'
+		print G+'  -e, --essid\t'+GR+'     ex. -e "Linksys"'
+		print '             \t essid (nom) du point d\'accès (routeur)'
+		print '             \t Ca force une attaque limitée; pas d\'autres réseaux ne serront attaqués\n'
 		#print '             \t     e.g. -e "all"'
 		#print '             \t using the essid "all" results in every network'
 		#print '             \t being targeted and attacked. this is not recommended'
 		#print '             \t because most attacks are useless from far away!\n'
 	else:
-		print G+'  -e\t   '+GR+'ssid (name) of the access point you want to attack'
+		print G+'  -e\t   '+GR+'ssid (nom) du point d\'acces que vous voulez attaquer'
 	#ALL
 	if full:
-		print G+'  -all, --all\t'+GR+' target and attack all access points found'
-		print '           \t this is dangerous because most attacks require injection,'
-		print '           \t most wifi cards cann;t inject unless they are close to the AP\n'
+		print G+'  -all, --all\t'+GR+' Cible et attaque tout les réseaux trouvés'
+		print '           \t ce qui est dangereux, car la plupart des attaques nécessitent l\'injection,'
+		print '           \t la plupart des cartes wifi ne peuvent pas injecter, sauf s\'ils sont à proximité de l\'AP \n'
 	else:
-		print G+'  -all\t   '+GR+'target and attack access points found'
+		print G+'  -all\t   '+GR+'Cible et attaque les points d\'accés trouvés'
 	#POWER
 	if full:
-		print G+'  -p, --power\t'+GR+'     e.g. -p 55'
-		print '             \t minimum power level (dB)'
-		print '             \t this is similar to the "-e all" option, except it filters APs'
-		print '             \t that are too far away for the attacks to be useful\n'
+		print G+'  -p, --power\t'+GR+'     ex. -p 55'
+		print '             \t Puissance minimale (dB)'
+		print '             \t Similaire à l\'option "-e all", sauf qu\'il filtre et ignore les APs'
+		print '             \t qui sont trop éloignés. \n'
 	else:
-		print G+'  -p\t   '+GR+'filters minimum power level (dB) to attack; ignores lower levels'
+		print G+'  -p\t   '+GR+'Filtre une puissance minimale (dB) pour attaquer; il ignore les reseaux faibles ou éloignés'
 	#CHANNEL
 	if full:
-		print G+'  -c, --channel\t'+GR+'     e.g. -c 6'
-		print '               \t channel to scan'
-		print '               \t not using this switch defaults to all possible channels'
-		print '               \t only use -c or --channel if you know the channel to listen on\n'
+		print G+'  -c, --channel\t'+GR+'     ex. -c 6'
+		print '               \t Channel à scanner *uniquement*'
+		print '               \t Scanne un seul channel'
+		print '               \t A utiliser uniquement si vous connaissez LE channel a écouter\n'
 	else:
-		print G+'  -c\t   '+GR+'channel to scan (default is all channels)'
+		print G+'  -c\t   '+GR+'Channel a scanner (Par defaut, tout les channels)'
 	#NOWPA
 	if full:
-		print G+'  --no-wpa\t'+GR+' ignores all WPA-encrypted networks'
-		print '          \t useful when using --power or "-e all" attacks\n'
+		print G+'  --no-wpa\t'+GR+' Ignore tout les réseaux WPA'
+		print '          \t utile pour filtrer quand vous avez --power ou "-e all" \n'
 	else:
-		print G+'  -nowpa   '+GR+'do NOT scan for WPA (default is on)'
+		print G+'  -nowpa   '+GR+'NE PAS scanner les réseaux WPA (ON par défaut)'
 	#NOWEP
 	if full:
-		print G+'  --no-wep\t'+GR+' ignores all WEP-encrypted networks'
-		print '          \t useful when using filtered attacks like -p or "-e all"\n'
+		print G+'  --no-wep\t'+GR+' Ignore tout les réseaux WEP'
+		print '          \t utile pour filtrer quand vous avez -p ou "-e all"\n'
 	else:
-		print G+'  -nowep   '+GR+'do NOT scan for WEP (default is on)'
+		print G+'  -nowep   '+GR+'NE PAS scanner les réseaux WEP (ON par défaut)'
 	
 ############################################################################### find_mon	
 def find_mon():
@@ -1396,7 +1395,7 @@ def find_mon():
 	global IFACE, TEMPDIR
 	
 	ifaces=[]
-	print GR+'[+] '+W+'searching for devices in monitor mode...'
+	print GR+'[+] '+W+'Recherche des interfaces en mode moniteur...'
 	proc=subprocess.Popen(['iwconfig'], stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 	txt=proc.communicate()[0]
 	lines=txt.split('\n')
@@ -1405,7 +1404,7 @@ def find_mon():
 			ifaces.append(line[0:line.find(' ')])
 	
 	if len(ifaces) == 0:
-		print GR+'[!] '+O+'no wireless interfaces are in monitor mode!'
+		print GR+'[!] '+O+'Aucune interface en mode moniteur!'
 		proc=subprocess.Popen(['airmon-ng'], stdout=subprocess.PIPE,stderr=open(os.devnull, 'w'))
 		txt=proc.communicate()[0]
 		lines=txt.split('\n')
@@ -1420,34 +1419,34 @@ def find_mon():
 					break
 		
 		if len(poss) == 0:
-			print R+'[!] no devices are capable of monitor mode!'
-			print R+'[!] perhaps you need to install new drivers'
-			print R+'[+] this program will now exit.'
+			print R+'[!] Aucune interface \'est capable de se mettre en mode moniteur!'
+			print R+'[!] Vous avez peut-être besoin d\'installer de nouveaux drivers'
+			print R+'[+] Le programme va s\'arreter.'
 			print W
 			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 		elif len(poss) == 1 and IFACE != '' and poss[0].lower() == IFACE.lower():
-			print GR+'[+] '+W+'putting "'+G + poss[0] + W+'" into monitor mode...'
+			print GR+'[+] '+W+'L\'interface "'+G + poss[0] + W+'" se met en mode moniteur...'
 			subprocess.call(['airmon-ng','start',poss[0]], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 			IFACE=''
 			find_mon()  # recursive call
 			return
 		else:
-			print GR+'\n[+] '+W+'select which device you want to put into monitor mode:'
+			print GR+'\n[+] '+W+'Sélectionnez le périphérique que vous voulez mettre en mode moniteur:'
 			for p in xrange(0, len(poss)):
 				print '      '+G + str(p + 1) + W+'. ' + poss[p]
 			
 			err=True
 			while err==True:
 				try:
-					print GR+'[+] '+W+'select the wifi interface (between '+G+'1'+W+' and '+G + str(len(poss)) + W+'):'+G,
+					print GR+'[+] '+W+'Sélectionnez l\'interface wifi(entre '+G+'1'+W+' et '+G + str(len(poss)) + W+'):'+G,
 					num=int(raw_input())
 					if num >= 1 and num <= len(poss):
 						err=False
 				except ValueError:
 					err=True
 			poss[num-1] = poss[num-1][:poss[num-1].find('\t')]
-			print GR+'[+] '+W+'putting "'+G + poss[num-1] + W+'" into monitor mode...'
+			print GR+'[+] '+W+'L\'interface "'+G + poss[num-1] + W+'" se met en mode moniteur...'
 			subprocess.call(['airmon-ng','start',poss[num-1]], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 			find_mon()  # recursive call
 			return
@@ -1457,13 +1456,13 @@ def find_mon():
 		if IFACE != '':
 			for i in ifaces:
 				if i == IFACE:
-					print GR+'[+] '+W+'using interface "'+G+ IFACE +W+'"\n'
+					print GR+'[+] '+W+'Utilisation de l\'interface "'+G+ IFACE +W+'"\n'
 					return
 		
 		IFACE=ifaces[0] # only one interface in monitor mode, we know which one it is
-		print GR+'[+] '+W+'defaulting to interface "'+G+ IFACE +W+'"\n'
+		print GR+'[+] '+W+'On passe sur l\'interface "'+G+ IFACE +W+'"\n'
 		return
-	print GR+'[+] '+W+'using interface "'+G+ IFACE +W+'"\n'
+	print GR+'[+] '+W+'Utilisation de l\'interface "'+G+ IFACE +W+'"\n'
 
 ############################################################################### getmac()
 def getmac():
@@ -1506,7 +1505,7 @@ def wpa_crack(index):
 	filename=WPA_CRACK[index][0]
 	ssid    =WPA_CRACK[index][1]
 	
-	print GR+'['+sec2hms(0)+'] '+W+'started cracking WPA key for "'+G + ssid + W+'";',
+	print GR+'['+sec2hms(0)+'] '+W+'Commencement du Crack WPA pour "'+G + ssid + W+'";',
 	
 	# calculate number of passwords we will try
 	proc_pmk=subprocess.Popen(['wc','-l',DICT], stdout=subprocess.PIPE, stderr=open(os.devnull,'w'))
@@ -1515,7 +1514,7 @@ def wpa_crack(index):
 		txt=txt.strip().split(' ')[0]
 		if txt != '':
 			total_pmks=int(txt.strip())+1
-			print 'using '+G+DICT+W+' ('+G + str(total_pmks) +' passwords'+W+')'
+			print 'Utilisation de '+G+DICT+W+' ('+G + str(total_pmks) +' mots de passe'+W+')'
 	else:
 		total_pmks=0
 		print ''
@@ -1548,7 +1547,7 @@ def wpa_crack(index):
 					first+=1
 					ks=txt[first:last]
 					if ks.strip() != '':
-						print G+str(ks)+W+' k/s;',
+						print G+str(ks)+W+' c/s;',
 						
 						# find the total keys
 						last=txt.rfind(' keys tested')
@@ -1557,7 +1556,7 @@ def wpa_crack(index):
 							first+=2
 							pmks=txt[first:last]
 							if pmks.strip() != '':
-								print G+str(pmks)+W+' keys total;',
+								print G+str(pmks)+W+' Clés totales;',
 								if total_pmks != 0 and pmks != '':
 									print G+str(int(pmks) * 100 / total_pmks) + '%'+W,
 						
@@ -1574,33 +1573,33 @@ def wpa_crack(index):
 			subprocess.call('echo "" > '+TEMPDIR+'crackout.tmp',shell=True)
 		
 		print '\r'+GR+'['+sec2hms(time.time() - START_TIME)+'] '+W+'cracking;',
-		print G+str(ks)+W+' k/s;',
-		print G+str(total_pmks)+W+' keys total;',
+		print G+str(ks)+W+' C/s;',
+		print G+str(total_pmks)+W+' clés totales;',
 		print G+'100%'+W,
 		print 'eta: '+C+'0:00:00     '+W
 		
 		if os.path.exists(TEMPDIR+'wpakey.txt'):
 			f = open(TEMPDIR+'wpakey.txt','r')
 			cracked=f.readlines()[0]
-			print '\n'+GR+'['+sec2hms(time.time()-START_TIME)+'] '+G+'cracked "' + ssid + '"! the key is: "'+C+cracked+G+'"'
+			print '\n'+GR+'['+sec2hms(time.time()-START_TIME)+'] '+G+'"' + ssid + '" Cracké! La clé est: "'+C+cracked+G+'"'
 			logit('cracked WPA key for "' + ssid + '", the key is: "' + cracked + '"')
 			CRACKED += 1
 			
 		else:
-			print GR+'\n['+sec2hms(time.time()-START_TIME)+'] '+W+'wordlist crack complete; '+O+'WPA key for "' + ssid + '" was not found in the dictionary'
+			print GR+'\n['+sec2hms(time.time()-START_TIME)+'] '+W+'Le crack avec dictionnaire est terminé; '+O+'La clé WPA pour "' + ssid + '" n\'a pas été trouvée dans le dictionnaire'
 		
 	except KeyboardInterrupt:
-		print R+'\n['+sec2hms(time.time()-START_TIME)+'] '+O+'cracking interrupted\n'+W
+		print R+'\n['+sec2hms(time.time()-START_TIME)+'] '+O+'Crack interompu\n'+W
 		# check if there's other files to crack (i < len(WPA_CRACK))
 		# if there are, ask if they want to start cracking the next handshake, or exit
 		if index != len(WPA_CRACK) - 1:
 			# there are more handshakes to crack! prompt a menu...
-			menu= G+'   [c]ontinue cracking other handshakes ('+str(len(WPA_CRACK)-index-1)+' remaining)\n'
-			menu+=R+'   [e]xit the program completely'
+			menu= G+'   [c]ontinuer à cracker les autres handshakes ('+str(len(WPA_CRACK)-index-1)+' remaining)\n'
+			menu+=R+'   [e]xit'
 			
-			print GR+'\n[+] '+W+'please select a menu option below:'
+			print GR+'\n[+] '+W+'Sélectionnez une option dans le menu:'
 			print menu
-			print GR+'[+] '+W+'enter option ('+G+'c'+W+' or '+R+'e'+W+'):',
+			print GR+'[+] '+W+'Entrez('+G+'c'+W+' ou '+R+'e'+W+'):',
 			typed=raw_input()
 			if typed == 'e':
 				WPA_CRACK.append(['',''])
@@ -1630,19 +1629,19 @@ def dict_check():
 		for x in ATTACK:
 			if TARGETS[x-1][2].startswith('WPA'):
 				# we don't have a dictionary and the user wants to crack WPA
-				print GR+'\n[+] '+W+'in order to crack WPA, you will need to '+O+'enter a dictionary file'
+				print GR+'\n[+] '+W+'Afin de cracker des clés WPA, vous avez besoin d\''+O+'entrer un fichier dictionnaire'
 				ent = 'blahnotafile'
 				#try:
 				while 1:
-					print GR+'[+] '+W+'enter the path to the dictionary to use, or "'+G+'none'+W+'" to not crack at all:'
+					print GR+'[+] '+W+'Entrez le chemin du dictionnaire a utiliser, ou tapez "'+G+'none'+W+'" ne pas cracker les WPA:'
 					ent = raw_input()
 					if ent == 'none' or ent == '"none"':
 						break
 					elif not os.path.exists(ent):
-						print R+'[!] error! path not found: '+O+ent+R+'; please try again\n'
+						print R+'[!] Erreur! Chemin non trouvé: '+O+ent+R+'; Essayez encore SVP\n'
 					else:
 						DICT=ent
-						print GR+'[+] '+W+'using "'+G+DICT+W+'" as wpa wordlist dictionary'
+						print GR+'[+] '+W+'Utilisation de "'+G+DICT+W+'" comme dictionnaire WPA'
 						break
 					
 				#except KeyboardInterrupt:
@@ -1655,13 +1654,13 @@ def dict_check():
 ############################################################################### attack
 def attack(index):
 	""" checks if target is WPA or WEP, forwards to the proper method """
-	print GR+'\n[+] '+W+'attacking "'+G + TARGETS[index][8] + W+'"...'
+	print GR+'\n[+] '+W+'Attaque de "'+G + TARGETS[index][8] + W+'"...'
 	if TARGETS[index][2].startswith('WPA'):
 		attack_wpa(index)
 	elif TARGETS[index][2].startswith('WEP'):
 		attack_wep_all(index)
 	else:
-		print R+'\n[!] unknown encryption type: '+O + TARGETS[index][2] + R+'\n'
+		print R+'\n[!] Cryptage inconnu: '+O + TARGETS[index][2] + R+'\n'
 
 ############################################################################### is_shared
 def is_shared(index):
@@ -1696,8 +1695,8 @@ def attack_wep_all(index):
 	
 	# if there's no selected attacks, stop
 	if weps[0]==False and weps[1]==False and weps[2]==False and weps[3]==False:
-		print R+'[!] no wep attacks are selected; unable to attack!'
-		print R+'[!] edit '+THEFILE+' so these are equal to True: WEP_ARP, WEP_FRAG, WEP_CHOP, WEP_P0841'
+		print R+'[!] Aucune attaque WEP n\'a été sélectionnée; impossible d\'attaquer!'
+		print R+'[!] Changez '+THEFILE+' et mettez au moin une attaque WEP'
 		print W
 		return
 	
@@ -1735,14 +1734,14 @@ def attack_wep_all(index):
 					time.sleep(1)
 					
 					print '\r'+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+\
-								'] '+W+'attempting '+O+'fake-authentication'+W+' ('+str(i)+'/3)',
+								'] '+W+'Tentative de '+O+'fake-authentication'+W+' ('+str(i)+'/3)',
 					sys.stdout.flush()
 					time.sleep(0.3)
 					faked=attack_fakeauth(index)
 					if faked:
 						break
 			else:
-				print GR+'[+] '+R+'killing '+W+'airodump-ng'
+				print GR+'[+] '+R+'Arret de '+W+'airodump-ng'
 				# wpa_supplicant workaround requires airodump-ng be closed.
 				try:
 					os.kill(proc_read.pid, signal.SIGTERM)   # airodump-ng
@@ -1753,17 +1752,17 @@ def attack_wep_all(index):
 				subprocess.call(['killall','airodump-ng'], stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
 				time.sleep(0.5)
 				
-				print GR+'[+] '+W+'stopping '+O+'mon0'
+				print GR+'[+] '+W+'Arret de '+O+'mon0'
 				subprocess.call(['airmon-ng','stop','mon0'], stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
 				
-				print ''+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+O+'attempting intel 4965 workaround'+W
+				print ''+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+O+'Tentative de contournement intel 4965'+W
 				faked=attack_fakeauth_intel(index)
 				
-				print GR+'[+] '+W+'starting '+O+'wlan1'+W+' on channel '+O+str(TARGETS[index][1])+W
+				print GR+'[+] '+W+'Démarrage de '+O+'wlan1'+W+' sur le channel '+O+str(TARGETS[index][1])+W
 				subprocess.call(['airmon-ng','start','wlan0',str(TARGETS[index][1])], \
 							stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
 				
-				print GR+'[+] '+R+'starting '+W+'airodump-ng'
+				print GR+'[+] '+R+'Démarrage de '+W+'airodump-ng'
 				# open airodump to capture packets
 				cmd = ['airodump-ng','-w',TEMPDIR+'wep','-c',TARGETS[index][1], '--bssid',TARGETS[index][0], \
 						'--output-format','csv,ivs',IFACE]
@@ -1771,14 +1770,14 @@ def attack_wep_all(index):
 				
 			if faked:
 				# fake auth was successful
-				print GR+'\r['+get_time(WEP_MAXWAIT,TIME_START)+'] '+G+'fake authentication successful :)       '
+				print GR+'\r['+get_time(WEP_MAXWAIT,TIME_START)+'] '+G+'Fake authentication réussie :)       '
 				if CHANGE_MAC == False:
 					client=THIS_MAC
 			else:
 				# fake auth was unsuccessful (SKA?)
-				print GR+'\r['+get_time(WEP_MAXWAIT, TIME_START)+'] '+R+'fake authentication unsuccessful :(       '
+				print GR+'\r['+get_time(WEP_MAXWAIT, TIME_START)+'] '+R+'Fake authentication ratée :(       '
 				if EXIT_IF_NO_FAKEAUTH:
-					print GR+'['+get_time(WEP_MAXWAIT, TIME_START)+'] '+R+'exiting attack...'
+					print GR+'['+get_time(WEP_MAXWAIT, TIME_START)+'] '+R+'Fin de l\'attaque...'
 					# kill airodump
 					try:
 						os.kill(proc_read.pid, signal.SIGTERM)   # airodump-ng
@@ -1790,7 +1789,7 @@ def attack_wep_all(index):
 					return
 				else:
 					print GR+'['+get_time(WEP_MAXWAIT, TIME_START)+'] '+O+\
-							'continuing attack anyway (odds of success are low)'+W
+							'Continuer l\'attaque quand meme (les chances de succès sont faibles)'+W
 					
 				
 		else:
@@ -1807,11 +1806,11 @@ def attack_wep_all(index):
 			
 			# change mac from OLD_MAC to 'client'
 			OLD_MAC = THIS_MAC
-			print GR+'['+get_time(WEP_MAXWAIT, TIME_START)+'] '+W+'changing mac to '+GR+ client.lower() +W+'...'
+			print GR+'['+get_time(WEP_MAXWAIT, TIME_START)+'] '+W+'Changement de l\'adresse MAC => '+GR+ client.lower() +W+'...'
 			subprocess.call(['ifconfig',IFACE,'down'])
 			subprocess.call(['macchanger','-m',client,IFACE], stdout=open(os.devnull,'w'))
 			subprocess.call(['ifconfig',IFACE,'up'])
-			print GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+W+'changed mac; continuing attack'
+			print GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+W+'MAC changée; l\'attaque continue'
 			time.sleep(0.3)
 			
 			# delete airodump log files
@@ -1835,10 +1834,10 @@ def attack_wep_all(index):
 	except KeyboardInterrupt:
 		# user interrupted during fakeauth
 		subprocess.call(['killall','aireplay-ng','airodump-ng'], stdout=open(os.devnull,'w'), stderr=open(os.devnull,'w'))
-		print R+'\n[!] ^C interrupt received'
+		print R+'\n[!] ^C Interuption reçue'
 		
 		# show menu!
-		menu=G+'   [c]ontinue with this attack ("'+TARGETS[index][8]+'")\n'
+		menu=G+'   [c]ontinuer avec cette attaque ("'+TARGETS[index][8]+'")\n'
 		opts=G+'c'+W
 		# check if there's other targets to attack
 		for i in xrange(0,len(ATTACK)):
@@ -1847,9 +1846,9 @@ def attack_wep_all(index):
 					# more to come
 					opts+=', '+G+'n'+W
 					if i == len(ATTACK)-2:
-						menu=menu+O+'   [n]ext attack (there is 1 target remaining)\n'
+						menu=menu+O+'   Prochai[n]e attaque (il reste 1 cible)\n'
 					else:
-						menu=menu+O+'   [n]ext attack (there are '+str(len(ATTACK)-i-1)+' targets remaining)\n'
+						menu=menu+O+'   Prochai[n]e attaque (il reste '+str(len(ATTACK)-i-1)+' cibles)\n'
 					break
 		
 		if len(WPA_CRACK) > 0 and DICT != '' and DICT != 'none':
@@ -1857,18 +1856,18 @@ def attack_wep_all(index):
 				opts+=','
 			opts+=O+'s'+W
 			if len(WPA_CRACK) == 1:
-				menu=menu+O+'   [s]kip to the WPA cracking (you have 1 handshake to crack)\n'
+				menu=menu+O+'   pa[s]ser au cracking WPA (vous avez 1 handshake à cracker)\n'
 			else:
-				menu=menu+O+'   [s]kip to the WPA cracking (you have '+str(len(WPA_CRACK))+' handshakes to crack)\n'
+				menu=menu+O+'   pa[s]ser au cracking WPA (vous avez '+str(len(WPA_CRACK))+' handshakes à cracker)\n'
 		
 		if menu!= '':
-			opts+=', or '+R+'e'+W
+			opts+=', ou '+R+'e'+W
 			
-			menu=menu+R+'   [e]xit the program completely'
+			menu=menu+R+'   [e]xit le programme'
 			
-			print GR+'\n[+] '+W+'please select a menu option below:'
+			print GR+'\n[+] '+W+'Sélectionnez une option:'
 			print menu
-			print GR+'[+] '+W+'enter option ('+opts+'):'+W,
+			print GR+'[+] '+W+'Entrez ('+opts+'):'+W,
 			typed=raw_input()
 			
 			if typed=='c':
@@ -1916,7 +1915,7 @@ def attack_wep_all(index):
 			TIME_START=time.time()
 			
 			print GR+'['+get_time(WEP_MAXWAIT,TIME_START)+ \
-				'] '+W+'started '+GR+wepname[wepnum]+W+' attack on "'+G+TARGETS[index][8]+W+'"; '+GR+'Ctrl+C for options'
+				'] '+W+'Commence à cracker avec '+GR+wepname[wepnum]+W+' sur "'+G+TARGETS[index][8]+W+'"; '+GR+'Ctrl+C pour les options'
 			
 			# remove any .xor and replay files
 			subprocess.call('rm -rf replay_arp-*.cap *.xor',shell=True)
@@ -1941,7 +1940,7 @@ def attack_wep_all(index):
 					if proc_replay.poll() != None: # and wepnum != 0 and wepnum != 3:
 						# the attack stopped, it's not arp-replay or p0841 (chopchop/frag)
 						if wepnum == 0 or wepnum == 3:
-							print R+'\n['+get_time(WEP_MAXWAIT,TIME_START)+'] '+wepname[wepnum]+' attack failed'
+							print R+'\n['+get_time(WEP_MAXWAIT,TIME_START)+'] '+wepname[wepnum]+' Attaque échouée'
 							break
 						
 						# look if a .xor file was created...
@@ -1951,7 +1950,7 @@ def attack_wep_all(index):
 						if xor_file == '':
 							# no xor file, we have failed!
 							print R+'\n['+get_time(WEP_MAXWAIT,TIME_START)+\
-									  '] attack failed; '+O+'unable to generate keystream'+W
+									  '] Attaque échouée; '+O+'Impossible de générer le flux de clés'+W
 							break
 						
 						else:
@@ -1963,7 +1962,7 @@ def attack_wep_all(index):
 							time.sleep(0.1)
 							
 							print GR+'\n['+get_time(WEP_MAXWAIT,TIME_START)+ \
-									   '] '+G+'produced keystream, '+O+'forging with packetforge-ng...'
+									   '] '+G+'Flux de clés réalisé, '+O+'fabrication avec packetforge-ng...'
 							
 							cmd=['packetforge-ng','-0','-a',TARGETS[index][0],'-h',client,\
 								'-k','192.168.1.2','-l','192.168.1.100','-y',xor_file,'-w',TEMPDIR+'arp.cap',IFACE]
@@ -1980,14 +1979,14 @@ def attack_wep_all(index):
 								# remove the .xor file so we don't mistake it later on
 								subprocess.call(['rm','-rf',xor_file])
 								
-								print GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+G+'replaying keystream with arp-replay...'
+								print GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+G+'Relance le flux de clés avec arp-replay...'
 								
 								cmd=['aireplay-ng','-2','-r',TEMPDIR+'arp.cap','-F',IFACE]
 								proc_replay = subprocess.Popen(cmd,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
 								replaying=True
 							else:
 								#invalid keystream
-								print R+'['+get_time(WEP_MAXWAIT,TIME_START)+'] unable to forge arp packet'
+								print R+'['+get_time(WEP_MAXWAIT,TIME_START)+'] Impossible de fabriquer le paquet ARP'
 								break
 					else:
 						# attack is still going strong
@@ -2002,7 +2001,7 @@ def attack_wep_all(index):
 					if ivs > AUTOCRACK and started_crack==False:
 						started_crack=True
 						# overwrite the current line
-						print '\r'+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+W+'started cracking WEP key ('+G+'+'+\
+						print '\r'+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+W+'Crack du WEP en cours ('+G+'+'+\
 								str(AUTOCRACK)+' ivs'+W+')                                       '
 						
 						# remove the wep key output file, so we don't get a false-positive
@@ -2021,17 +2020,17 @@ def attack_wep_all(index):
 							pw = f.readlines()[0].strip()
 							f.close()
 						except IOError:
-							pw='[an unknown error occurred; check wepkey.txt]'
+							pw='[Une erreur est survenue; verifiez wepkey.txt]'
 						
 						CRACKED += 1
-						print GR+'\n['+get_time(WEP_MAXWAIT,TIME_START)+'] '+G+'wep key found for "'+TARGETS[index][8]+'"!'
-						print GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+W+'the key is "'+C + pw + W+'", saved in '+G+'log.txt'
+						print GR+'\n['+get_time(WEP_MAXWAIT,TIME_START)+'] '+G+'Clé wep trouvée pour "'+TARGETS[index][8]+'"!'
+						print GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+W+'La clé est "'+C + pw + W+'", sauvée dans '+G+'log.txt'
 						
 						# only print the ascii version to the log file if it does not contain non-printable characters
 						if to_ascii(pw).find('non-print') == -1:
-							logit('cracked WEP key for "'+TARGETS[index][8]+'", the key is: "'+pw+'", in ascii: "' + to_ascii(pw) +'"')
+							logit('Clé WEP crackée pour "'+TARGETS[index][8]+'", la clé est: "'+pw+'", en ascii: "' + to_ascii(pw) +'"')
 						else:
-							logit('cracked WEP key for "'+TARGETS[index][8]+'", the key is: "'+pw+'"')
+							logit('Clé WEP crackée pour "'+TARGETS[index][8]+'", la clé est: "'+pw+'"')
 						
 						break # break out of this method's while
 					
@@ -2042,8 +2041,8 @@ def attack_wep_all(index):
 						proc_crack = subprocess.Popen(cmd,shell=True,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
 					
 					print '\r'+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+ \
-							'] '+W+wepname[wepnum]+' attack on "'+G+TARGETS[index][8]+W+'"',
-					print 'captured '+G+ str(ivs) +W+' ivs',
+							'] '+W+wepname[wepnum]+' attaque sur "'+G+TARGETS[index][8]+W+'"',
+					print 'IVs capturés: '+G+ str(ivs) +W+' ...',
 					ivsps = (ivs-oldivs) / 5
 					print '('+G+str(ivsps)+W+'/sec)',
 					
@@ -2062,7 +2061,7 @@ def attack_wep_all(index):
 					
 				except KeyboardInterrupt:
 					print R+'\n['+get_time(WEP_MAXWAIT,TIME_START)+ \
-							  '] stopping attack on "'+O+TARGETS[index][8]+R+'"...'
+							  '] Arret de l\'attaque sur "'+O+TARGETS[index][8]+R+'"...'
 					
 					# show menu!
 					wcount=0 # count number of methods remaining
@@ -2073,10 +2072,10 @@ def attack_wep_all(index):
 						menu=''
 						opts=''
 					elif wcount == 1:
-						menu=G+'   [c]ontinue attacking; 1 method left\n'
+						menu=G+'   [c]ontinuer d\'attaquer; 1 methode restante\n'
 						opts=G+'c'+W
 					else:
-						menu=G+'   [c]ontinue attacking; '+str(wcount)+' methods left\n'
+						menu=G+'   [c]ontinuer d\'attaquer; '+str(wcount)+' methodes restantes\n'
 						opts=G+'c'+W
 					
 					# check if there's other targets to attack
@@ -2095,9 +2094,9 @@ def attack_wep_all(index):
 									opts+=O+'n'+W
 								
 								if i == len(ATTACK)-2:
-									menu+='   [n]ext attack (there is 1 target remaining)\n'
+									menu+='   prochai[n]e attaque (il reste 1 cible)\n'
 								else:
-									menu+='   [n]ext attack (there are '+str(len(ATTACK)-i-1)+' targets remaining)\n'
+									menu+='   prochai[n]e attaque (il reste '+str(len(ATTACK)-i-1)+' cibles)\n'
 								break
 					
 					if len(WPA_CRACK) > 0 and DICT != '' and DICT != 'none':
@@ -2105,18 +2104,18 @@ def attack_wep_all(index):
 							opts+=', '
 						opts+=O+'s'+W
 						if len(WPA_CRACK) == 1:
-							menu+=O+'   [s]kip to the WPA cracking (you have 1 handshake to crack)\n'
+							menu+=O+'   Pa[s]ser au crack du handshake (vous avez 1 handshake à cracker)\n'
 						else:
-							menu+=O+'   [s]kip to the WPA cracking (you have '+str(len(WPA_CRACK))+' handshakes to crack)\n'
+							menu+=O+'   Pa[s]ser au crack des handshakes (vous avez '+str(len(WPA_CRACK))+' handshakes à cracker)\n'
 					
 					if menu!= '':
-						opts+=', or '+R+'e'+W
+						opts+=', ou '+R+'e'+W
 						
-						menu=menu+R+'   [e]xit the program completely'
+						menu=menu+R+'   [e]xit'
 						
-						print GR+'\n[+] '+W+'please select a menu option below:'
+						print GR+'\n[+] '+W+'Sélectionnez une option:'
 						print menu
-						print GR+'[+] '+W+'enter option ('+opts+'):'+W,
+						print GR+'[+] '+W+'Entrez ('+opts+'):'+W,
 						typed=raw_input()
 						
 						if typed == 'c':
@@ -2199,7 +2198,7 @@ def attack_wep_all(index):
 							wcount += 1
 							break
 					if wcount > 0:
-						print '\n'+R+'[+] '+wepname[wepnum]+' attack ran out of time',
+						print '\n'+R+'[+] de temps d\'attaque de '+wepname[wepnum]+' est dépassé',
 			# end of while loop
 			print W
 			
@@ -2230,9 +2229,9 @@ def attack_wep_all(index):
 	if stop_attack == False:
 		# the attack stopped on it's own - ran out of time
 		if started_crack:
-			print GR+'[+] '+O+'attack unsuccessful!'+W+' unable to crack WEP key in time'
+			print GR+'[+] '+O+'Attaque ratée!'+W+' impossible de cracker la clé WEP (temps écoulé)'
 		else:
-			print GR+'[+] '+O+'attack unsuccessful!'+W+' unable to generate enough IVS in time'
+			print GR+'[+] '+O+'Attaque ratée!'+W+' impossible de génerer assez de IVs (temps écoulé)'
 	
 	# kill processes
 	try:
@@ -2258,16 +2257,16 @@ def attack_wep_all(index):
 	
 	# change mac back
 	if OLD_MAC != '':
-		print GR+'[+] '+O+'changing mac back to '+GR+OLD_MAC.lower()+O+'...'
+		print GR+'[+] '+O+'Retour à l\'adresse MAC initiale...'+GR+OLD_MAC.lower()+O+'...'
 		subprocess.call(['ifconfig',IFACE,'down'])
 		subprocess.call(['macchanger','-m',OLD_MAC,IFACE], stdout=open(os.devnull,'w'))
 		subprocess.call(['ifconfig',IFACE,'up'])
 		OLD_MAC=''
-		print GR+'[+] '+G+'mac changed back to original address'
+		print GR+'[+] '+G+'Vous avez retrouvé votre adresse MAC normale'
 	
 	# check if user selected to exit completely
 	if EXIT_PROGRAM:
-		print R+'[+] the program will now exit'
+		print R+'[+] Le programme va se fermer'
 		print W
 		SKIP_TO_WPA=True
 		WPA_CRACK=[]
@@ -2278,7 +2277,7 @@ def to_ascii(txt):
 		includes the text 'contains non-printable characters' if true, or if length is not even
 	"""
 	if len(txt) % 2 != 0:
-		return '[contains non-printable characters]'
+		return '[Contiens des caractères non affichable]'
 	
 	s=''
 	wrong=False
@@ -2291,7 +2290,7 @@ def to_ascii(txt):
 			wrong=True
 	
 	if wrong == True:
-		s=s+' [contains non-printable characters]'
+		s=s+' [Contiens des caractères non affichable]'
 	return s
 
 def get_ivs(filename):
@@ -2326,20 +2325,21 @@ def attack_fakeauth_intel(index):
 	f.close()
 	
 	cmd='wpa_supplicant -cfake.conf -iwlan0 -Dwext -dd'
-	print GR+'[+] '+W+'executing command: '+G+cmd+W+''
-	print GR+'[+] '+W+'30 second timeout starting now...'
+	print GR+'[+] '+W+'Execution de la commande: '+G+cmd+W+''
+	print GR+'[+] '+W+'Un délai de 30 secondes à partir de maintenant ...'
+	#In the english version (r41) there is a small typo "second" => "seconds"
 	
 	proc_intel=pexpect.spawn(cmd)
 	try:
 		proc_intel.expect('State: ASSOCIATED -> COMPLETED', timeout=30)
-		print GR+'[+] '+W+'received '+G+'State: ASSOCIATED -> COMPLETED'+W
+		print GR+'[+] '+W+'Reçu: '+G+'Etat: Associé -> Fini'+W
 		return True
 	except pexpect.TIMEOUT:
-		print R+'[+] did not receive '+O+'State: ASSOCIATED -> COMPLETED'
+		print R+'[+] N\'a pas reçu '+O+'Etat: Associé -> Fini'
 		# kill the child process
 		proc_intel.close(force=True)
 	
-	print R+'[!]        wpa_supplicant workaround failed!'
+	print R+'[!]        solution de contournement wpa_supplicant a échoué!'
 	#print R+'[!]        wpa_supplicant output:'
 	#print '          ' + txt.strip().replace('\n','\n          ')
 	print W
@@ -2391,7 +2391,7 @@ def attack_fakeauth(index):
 	# it's SKA (Shared Key Authentication). this is a BITCH
 	elif txt.lower().find('switching to shared key') != -1 or txt.lower().find('rejects open-system') != -1:
 		
-		print GR+'['+get_time(AUTH_MAXWAIT,START_TIME)+'] '+O+'switching to shared key authentication...'
+		print GR+'['+get_time(AUTH_MAXWAIT,START_TIME)+'] '+O+'Passage à shared key authentication ...'
 		
 		faked=False
 		
@@ -2424,7 +2424,7 @@ def attack_fakeauth(index):
 				else:
 					# .xor file did not let us authenticate.. smells like a Broken SKA
 					print R+'['+sec2hms(AUTH_MAXWAIT-(time.time()-START_TIME)) + \
-						  '] invalid .xor file: "Broken SKA?" unable to fake authenticate :('
+						  '] Fichier .xor invalide: "SKA Cassé?" Impossible de faire la fake authentication :('
 					faked=False
 				break
 				
@@ -2440,7 +2440,7 @@ def attack_fakeauth(index):
 				subprocess.call(['rm','-rf',TEMPDIR+'temp.txt'])
 				break
 			
-			print GR+'['+get_time(AUTH_MAXWAIT, START_TIME)+'] '+W+'sent deauth; listening for client to reconnect...'
+			print GR+'['+get_time(AUTH_MAXWAIT, START_TIME)+'] '+W+'Envoi de paquets de deauth; ecoute des clients qui se reconnectent...'
 			time.sleep(5)
 		
 		# kill the aireplay instance in case it's still going
@@ -2469,8 +2469,8 @@ def attack_wpa(index):
 	temp=re.sub(r'[^a-zA-Z0-9]','',temp)
 	if os.path.exists('hs/'+temp+'.cap'):
 		# already have a handshake by this name...
-		print GR+'[+] '+R+'capture aborted '+W+'because the file '+O+temp+'.cap'+G+' already exists!'
-		print GR+'[+] '+W+'to re-capture this handshake, delete "'+O+temp+'.cap'+W+'" and run again'
+		print GR+'[+] '+R+'Capture annulée '+W+'car le fichier '+O+temp+'.cap'+G+' existe déja!'
+		print GR+'[+] '+W+'Pour recapturer ce handshake, supprimez "'+O+temp+'.cap'+W+'" et recommencez la capture'
 		#print R+ '[+] '+R+'aborting handshake capture'
 		
 		# add the handshake to the cracking list
@@ -2495,7 +2495,7 @@ def attack_wpa(index):
 		cmd = ['airodump-ng','-w',TEMPDIR+'wpa','-c',TARGETS[index][1],'--bssid',TARGETS[index][0],IFACE]
 		proc_read = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 		
-		print GR+'['+sec2hms(WPA_MAXWAIT)+'] '+W+'starting wpa handshake capture'
+		print GR+'['+sec2hms(WPA_MAXWAIT)+'] '+W+'Démarrage de la capture du handshake WPA'
 		got_handshake=False
 		
 		while time.time() - TIME_START < WPA_MAXWAIT or WPA_MAXWAIT == 0:
@@ -2516,7 +2516,7 @@ def attack_wpa(index):
 			proc_deauth = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 			proc_deauth.wait()
 			
-			print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+'] '+W+'sent 3 deauth packets;                  ',
+			print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+'] '+W+'Envoi de 3 paquets deauth;                  ',
 			sys.stdout.flush()
 			
 			# check for handshake using aircrack
@@ -2558,7 +2558,7 @@ def attack_wpa(index):
 				subprocess.call(['cp',TEMPDIR+'wpa-01.cap', temp+'.cap'])
 				
 				print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+ \
-						'] '+W+'sent 3 deauth packets; '+G+'handshake captured!'+W+' saved as "'+G+temp+'.cap'+W+'"'
+						'] '+W+'Envoi de 3 paquets deauth; '+G+'handshake capturé!'+W+' sauvé dans "'+G+temp+'.cap'+W+'"'
 				sys.stdout.flush()
 				
 				# strip handshake if user requested it
@@ -2568,7 +2568,7 @@ def attack_wpa(index):
 					if proc_pyrit.communicate()[0].strip() != '':
 						# print/strip
 						print GR+'['+get_time(WPA_MAXWAIT,TIME_START)+ \
-								'] '+G+'stripped'+W+' handshake using '+G+'pyrit'+W
+								'] '+G+'Handshake'+W+' découpé avec '+G+'pyrit'+W
 						
 						# should pyrit overwrite the old cap file? yes.
 						subprocess.call(['pyrit','-r',temp+'.cap','-o',temp+'.cap','strip'],\
@@ -2579,7 +2579,7 @@ def attack_wpa(index):
 						if proc_tshark.communicate()[0].strip() != '':
 							# print/strip
 							print GR+'['+get_time(WPA_MAXWAIT,TIME_START)+ \
-									'] '+G+'stripped'+W+' handshake using '+G+'pyrit'+W
+									'] '+G+'Handshake'+W+' découpé avec '+G+'pyrit'+W
 							
 							# over-write old file
 							subprocess.call(['tshark','-r',temp+'.cap','-R',\
@@ -2596,7 +2596,7 @@ def attack_wpa(index):
 				
 			else:
 				# no handshake yet
-				print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+'] '+W+'sent 3 deauth packets; '+O+'no handshake yet ',
+				print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+'] '+W+'Envoi de 3 paquets deauth; '+O+'Pas encore de handshake ',
 				sys.stdout.flush()
 			
 			time.sleep(WPA_TIMEOUT)
@@ -2626,10 +2626,10 @@ def attack_wpa(index):
 								# client not in list! add it
 								wpa_clients.append(cli[0])
 								print '\r'+GR+'['+get_time(WPA_MAXWAIT,TIME_START)+\
-								              '] '+G+'added new client: '+W+cli[0]+', '+G+'total: '+str(len(wpa_clients))+' '
+								              '] '+G+'Nouveau client ajouté: '+W+cli[0]+', '+G+'au total: '+str(len(wpa_clients))+' '
 			
 		if got_handshake==False:
-			print R+'\n['+sec2hms(0)+'] unable to capture handshake in time (' + str(WPA_MAXWAIT) + ' sec)'
+			print R+'\n['+sec2hms(0)+'] Impossible de capturer le Handshake, manque de temps (' + str(WPA_MAXWAIT) + ' sec)'
 	
 	except KeyboardInterrupt:
 		# clean up
@@ -2644,7 +2644,7 @@ def attack_wpa(index):
 			pass
 		
 		print R+'\n['+get_time(WPA_MAXWAIT,TIME_START)+\
-				  '] '+R+'attack on "'+O+TARGETS[index][8]+R+'" interrupted'
+				  '] '+R+'Attaque de "'+O+TARGETS[index][8]+R+'" interrompue'
 		
 		menu=''
 		opts=''
@@ -2655,9 +2655,9 @@ def attack_wpa(index):
 					# more to come
 					opts=G+'n'+W
 					if i == len(ATTACK)-2:
-						menu=G+'   [n]ext attack (there is 1 target remaining)\n'
+						menu=G+'   Prochai[n]e attaque (il reste 1 cible)\n'
 					else:
-						menu=G+'   [n]ext attack (there are '+str(len(ATTACK)-i-1)+' targets remaining)\n'
+						menu=G+'   Prochai[n]e attaque (il reste '+str(len(ATTACK)-i-1)+' cibles)\n'
 					break
 		
 		if len(WPA_CRACK) > 0 and DICT != '' and DICT != 'none':
@@ -2665,18 +2665,18 @@ def attack_wpa(index):
 				opts+=','
 			opts+=O+'s'+W
 			if len(WPA_CRACK) == 1:
-				menu=menu+O+'   [s]kip to the WPA cracking (you have 1 handshake to crack)\n'
+				menu=menu+O+'   Pa[s]ser au crack du handshake WPA (vous avez 1 handshake à cracker)\n'
 			else:
-				menu=menu+O+'   [s]kip to the WPA cracking (you have '+str(len(WPA_CRACK))+' handshakes to crack)\n'
+				menu=menu+O+'   Pa[s]ser au crack du handshake WPA (vous avez '+str(len(WPA_CRACK))+' handshakes à cracker)\n'
 		
 		if menu!= '':
-			opts+=', or '+R+'e'+W
+			opts+=', ou '+R+'e'+W
 			
-			menu=menu+R+'   [e]xit the program completely'
+			menu=menu+R+'   [e]xit'
 			
-			print GR+'\n[+] '+W+'please select a menu option below:'
+			print GR+'\n[+] '+W+'Sélectionnez une option:'
 			print menu
-			print GR+'[+] '+W+'enter option ('+opts+W+'):'+W,
+			print GR+'[+] '+W+'Entrez ('+opts+W+'):'+W,
 			typed=raw_input()
 			
 			if typed=='n':
@@ -2750,20 +2750,20 @@ def gettargets():
 		proc = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 		
 		if ESSID == '':
-			print GR+'[+] '+W+'waiting for targets. press '+G+'Ctrl+C'+W+' when ready\n'
+			print GR+'[+] '+W+'Attente des cibles. Faites '+G+'Ctrl+C'+W+' lorsque vous êtes pret\n'
 		elif ESSID == 'all' or ESSID.startswith('pow>'):
 			time_wait=20
 			if CHANNEL == '0':
 				time_wait=30
 			for i in xrange(time_wait, 0, -1):
-				print GR+'\r[+] '+W+'waiting '+G+str(i)+W+' seconds for targets to appear. press '+O+'Ctrl+C'+W+' to skip the wait ',
+				print GR+'\r[+] '+W+'Attendez '+G+str(i)+W+' secondes que les réseaux soient affichés. Faites '+O+'Ctrl+C'+W+' pour passer l\'attente ',
 				sys.stdout.flush()
 				time.sleep(1)
 				parsetargets()
 			
 			print '\n'
 		else:
-			print GR+'[+] '+W+'waiting for "'+G + ESSID +W+'" to appear, press '+O+'Ctrl+C'+W+' to skip...'
+			print GR+'[+] En attente de "'+G + ESSID +W+'" pour qu\'il apparaisse, faites '+O+'Ctrl+C'+W+' pour passer...'
 		
 		old=0
 		oldc=0
@@ -2775,7 +2775,7 @@ def gettargets():
 				if waiting==-1:
 					for x in xrange(0, len(TARGETS)):
 						if TARGETS[x][8].lower() == ESSID.lower():
-							print GR+'\n[+] '+W+'found "'+G+ESSID+W+'", waiting '+G+'5 sec'+W+' for clients...',
+							print GR+'\n[+] "'+G+ESSID+W+'" trouvé, attente d\'un client pendant '+G+'5 sec'+W+'...',
 							sys.stdout.flush()
 							ATTACK=[x+1]
 							waiting=0
@@ -2783,7 +2783,7 @@ def gettargets():
 				else:
 					for x in xrange(0, len(TARGETS)):
 						if TARGETS[x][8].lower() == ESSID.lower():
-							print GR+'\r[+] '+W+'found "'+G+ESSID+W+'", waiting '+G+str(5-waiting)+' sec'+W+' for clients...',
+							print GR+'\r[+] "'+G+ESSID+W+'" trouvé, attente d\'un client pendant '+G+str(5-waiting)+' sec'+W+'...',
 							waiting += 1
 							ATTACK=[x+1]
 							
@@ -2796,7 +2796,7 @@ def gettargets():
 					sys.stdout.flush()
 			else:
 				print '\r'+GR+'['+sec2hms(time.time()-TIME_START)+ \
-						'] '+G+str(len(TARGETS))+W+' targets and '+G+str(len(CLIENTS))+W+' clients found',
+						'] '+G+str(len(TARGETS))+W+' cibles et '+G+str(len(CLIENTS))+W+' clients trouvés',
 				
 				if ESSID == 'all' or ESSID.startswith('pow>'):
 					# wait for 10 seconds, then start cracking
@@ -2826,7 +2826,7 @@ def gettargets():
 		# add all targets to the list to attack
 		ATTACK=xrange(0, len(TARGETS))
 		if len(ATTACK) > 0:
-			print GR+'[+] '+W+'targeting: ',
+			print GR+'[+] '+W+'Ciblage: ',
 			for x in ATTACK:
 				print '"'+G + TARGETS[x-1][8] + W+'"',
 			print ''
@@ -2837,7 +2837,7 @@ def gettargets():
 		try:
 			power=int(ESSID[4:])
 		except ValueError:
-			print R+'[!] invalid power level: ' + ESSID + '; exiting'
+			print R+'[!] Puissance invalide: ' + ESSID + '; exit...'
 			print W
 			return
 		
@@ -2846,21 +2846,21 @@ def gettargets():
 		for i in xrange(0, len(TARGETS)):
 			try:
 				if int(TARGETS[i][5]) >= power:
-					print GR+'[+] '+W+'added to attack list: "'+G + TARGETS[i][8] + W+'" ('+G + TARGETS[i][5] + 'dB'+W+')'
+					print GR+'[+] '+W+'Ajouté à la liste d\'attaque: "'+G + TARGETS[i][8] + W+'" ('+G + TARGETS[i][5] + 'dB'+W+')'
 					ATTACK.append(i+1)
 			except ValueError:
-				print R+'[!] invalid AP power level: '+O + TARGETS[i][5] + R+'; moving on'
+				print R+'[!] Niveau de puissance invalide: '+O + TARGETS[i][5] + R+'; on passe'
 				continue
 		
 		# if we didn't add any targets...
 		if ATTACK==[]:
-			print R+'[+] there are no targets with a power level greater than '+O + str(power) + 'dB'
-			print R+'[+] try selecting a '+O+'lower power threshold'
+			print R+'[+] Il n\'y a pas de cibles avec un niveau de puissance supérieure à '+O + str(power) + 'dB'
+			print R+'[+] Essayez de choisir un '+O+'seuil de puissance plus faible'
 			print W
 			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 		
-		print GR+'[+] '+G+str(len(ATTACK))+W+' access points targeted for attack'
+		print GR+'[+] '+G+str(len(ATTACK))+W+' réseaux ciblés pour l\'attaque'
 		return
 		
 	elif ESSID != '':
@@ -2869,17 +2869,17 @@ def gettargets():
 			#print '[+] found "' + ESSID + '"!'
 			return
 		else:
-			print GR+'[+] '+R+'unable to find "'+O + ESSID + R+'"'
+			print GR+'[+] '+R+'Impossible de trouver "'+O + ESSID + R+'"'
 	
 	print ''
 	if len(TARGETS) == 0:
-		print R+'[!] no targets found! make sure that '+O+'airodump-ng'+R+' is working properly'
-		print R+'[!] the program will now exit'
+		print R+'[!] Pas de cibles trouvées ! Soyez sur que '+O+'airodump-ng'+R+' fonctionne bien'
+		print R+'[!] Le programme va se fermer'
 		print W
 		subprocess.call(['rm','-rf',TEMPDIR])
 		sys.exit(0)
 	
-	print GR+'[+] '+W+'select the '+G+'number(s)'+W+' of the target(s) you want to attack:'
+	print GR+'[+] '+W+'Sélectionnez le(s) '+G+'numéro(s)'+W+' des/de la cible(s) que vous voulez attaquer:'
 	for i in xrange(0, len(TARGETS)):
 		# get power dB
 		try:
@@ -2920,15 +2920,15 @@ def gettargets():
 			print ''
 		
 	
-	print GR+'\n[+] '+W+'for multiple choices, use '+C+'dashes'+W+' for ranges and '+C+'commas'+W+' to separate'
-	print GR+'[+] '+W+'example: '+G+'1-3,5-6'+W+' would target targets numbered '+C+'1, 2, 3, 5, 6'
-	print GR+'[+] '+W+'to attack all access points, type "'+G+'all'+W+'"'+G
+	print GR+'\n[+] '+W+'Pour sélectionner plusieurs choix, utilisez le '+C+'- (tiret)'+W+' et la '+C+', (virgule)'+W+' pour séparer'
+	print GR+'[+] '+W+'Exemple: '+G+'1-3,5-6'+W+' va sélectionner les cibles '+C+'1, 2, 3, 5, 6'
+	print GR+'[+] '+W+'Pour attaquer tout les réseaux, écrivez "'+G+'all'+W+'"'+G
 	response = raw_input()
 	
 	ATTACK=stringtolist(response, len(TARGETS))
 	if len(ATTACK) > 0:
 		for x in ATTACK:
-			print GR+'[+] '+W+'adding "'+G + TARGETS[x-1][8] + W+'" to the attack list'+W
+			print GR+'[+] '+W+'Ajout de "'+G + TARGETS[x-1][8] + W+'" à la liste d\'attaque'+W
 
 
 def parsetargets():
@@ -2994,9 +2994,9 @@ def parsetargets():
 						CLIENTS[temp[5].strip()] = temp[0]
 		f.close()
 	except IOError:
-		print R+'\n[!] the program was unable to capture airodump packets!'
-		print R+'[+] please make sure you have properly enabled your device in monitor mode'
-		print R+'[+] the program is unable to continue and will now exit'
+		print R+'\n[!] Le programme est incapable de capturer les paquets airodump!'
+		print R+'[+] SVP Soyez sur que votre interface est en mode moniteur'
+		print R+'[+] Le programme est incapable de continuer et il va se fermer'
 		print W
 		subprocess.call(['rm','-rf',TEMPDIR])
 		sys.exit(0)
@@ -3005,11 +3005,11 @@ def parsetargets():
 	TARGETS = sorted(TARGETS, key=lambda targets: targets[5], reverse=True)
 	
 	if len(DEAUTH) > 0:
-		msg='[sending hidden deauth'
+		msg='[Envoi de deauth caché'
 		if len(DEAUTH) > 1:
 			msg+='s'
 		msg+=']'
-		print ''+O+' [sending hidden deauth] '+W,
+		print ''+O+' [Envoi de deauth caché] '+W,
 		for d in DEAUTH:
 			sys.stdout.flush()
 			subprocess.call(d, stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
@@ -3045,7 +3045,7 @@ def stringtolist(s, most):
 				else:
 					lst.append(int(i))
 	except ValueError:
-		print R+'[+] error! invalid input'+W
+		print R+'[+] Erreur! entrée invalide'+W
 	
 	lst = sorted(lst)
 	
@@ -3086,8 +3086,6 @@ def sec2hms(sec):
 	result += str(s)
 	
 	return result
-
-print '����'
 
 main() # launch the main method
 subprocess.call(['rm','-rf',TEMPDIR])
