@@ -39,7 +39,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=43
+REVISION=44
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -1400,11 +1400,14 @@ def find_mon():
 	proc=subprocess.Popen(['iwconfig'], stdout=subprocess.PIPE,stderr=subprocess.PIPE)
 	txt=proc.communicate()[0]
 	lines=txt.split('\n')
+	current_iface=''
 	for line in lines:
+		if not line.startswith(' ') and line[0:line.find(' ')] != '':
+			current_iface=line[0:line.find(' ')]
 		if line.find('Mode:Monitor') != -1:
-			ifaces.append(line[0:line.find(' ')])
+			ifaces.append(current_iface)
 	
-	if len(ifaces) == 0:
+	if len(ifaces) == 0 or ifaces == []:
 		print GR+'[!] '+O+'no wireless interfaces are in monitor mode!'
 		proc=subprocess.Popen(['airmon-ng'], stdout=subprocess.PIPE,stderr=open(os.devnull, 'w'))
 		txt=proc.communicate()[0]
