@@ -40,7 +40,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=51
+REVISION=54
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2384,7 +2384,7 @@ def attack_fakeauth_intel(index):
 	
 	cmd='wpa_supplicant -cfake.conf -iwlan0 -Dwext -dd'
 	print GR+'[+] '+W+'executing command: '+G+cmd+W+''
-	print GR+'[+] '+W+'30 second timeout starting now...'
+	print GR+'[+] '+W+'30-second timeout starting now...'
 	
 	proc_intel=pexpect.spawn(cmd)
 	try:
