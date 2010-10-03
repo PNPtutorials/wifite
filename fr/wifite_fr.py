@@ -41,7 +41,7 @@ except ImportError:
 	print '[!] Impossible d importer tkinter -- GUI d�sactiv�'
 
 # current revision
-REVISION=50
+REVISION=51
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -981,6 +981,14 @@ def aircrack_warning():
 		print GR+'[+] '+O+'ATTENTION:'+W+' des applications/packages '+G+'requis'+W+' n ont pas été trouvé:'+W+req
 	if rec != '':
 		print GR+'[+] '+O+'ATTENTION:'+W+' des applications/packages '+G+'recommandés'+W+' n ont pas été trouvé'+W+rec
+	
+	outp = subprocess.Popen(['aircrack-ng'],stdout=subprocess.PIPE,stderr=open(os.devnull,'w')).communicate()
+	for line in outp:
+		if line == None:
+			break
+		if line.strip() != '' and line.find('1.0') != -1:
+			print GR+'[+] '+R+'ERROR:'+O+' aircrack-ng 1.1 '+W+'required;'+O+' '+R+'aircrack-ng 1.0'+O+' was found!'+W
+			break
 
 ############################################################################### intel 4965 check
 def check_intel():
