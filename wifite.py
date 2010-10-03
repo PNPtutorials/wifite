@@ -40,7 +40,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=49
+REVISION=50
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -178,6 +178,7 @@ class App:
 		setp0841  =1
 		setmac    =1
 		setauth   =0
+		setanon   =0
 		try:
 			f=open('.wifite.conf','r')
 			txt=f.read()
@@ -238,7 +239,8 @@ class App:
 					setauth=1
 				elif l == '-console':
 					setselarg=1
-					
+				elif l == '-anon':
+					setanon=1
 		except IOError:
 			pass
 		
@@ -420,6 +422,11 @@ class App:
 		w=Label(frame, text=' ', font=('',5,''))
 		w.grid(row=r,columnspan=3)
 		
+		self.anony=IntVar()
+		self.anony.set(setanon)
+		w=Checkbutton(frame, text='anonymize all attacks', variable=self.anony, font=f0nt, activeforeground='red')
+		w.grid(row=r,column=1, columnspan=2,sticky='W')
+		
 		r += 1
 		w = Button(frame, text="h4x0r 1t n40", font=('FreeSans', 20, 'bold'), relief=FLAT, height=2,fg="white", bg="red", \
 				highlightbackground='white', highlightcolor='red', command=self.execute,activebackground='darkred',\
@@ -589,6 +596,9 @@ class App:
 		
 		if self.wepauth.get() == 1:
 			cmd.append('-f')
+		
+		if self.anony.get() == 1:
+			cmd.append('-anon')
 		
 		cmd.append('-pps')
 		cmd.append(str(self.weppps.get()))
