@@ -20,6 +20,7 @@ import time        # need to sleep; keep track how long methods take
 import re          # reg-ex: for replacing characters in strings
 import urllib      # needed for downloading webpages (updating the script)
 import tempfile    # for creating temporary directory
+import random      # for random mac address
 
 try:
 	import pexpect # used during wpa_supplicant attacks
@@ -40,7 +41,7 @@ except ImportError:
 	print '[!] Impossible d importer tkinter -- GUI d�sactiv�'
 
 # current revision
-REVISION=48
+REVISION=49
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -112,6 +113,9 @@ HAS_INTEL4965=False
 # mac addresses, used for restoring mac addresses after changing them
 THIS_MAC=''
 OLD_MAC =''
+# more mac adddresses, for use with "-anon" anonymizer
+ORIGINAL_MAC=''
+ANONYMOUS_MAC=''
 
 # COLORS, because i think they're faaaaaabulous
 W  = "\033[0m";  # white (normal)
@@ -684,10 +688,10 @@ def update():
 			print GR+'[+] '+R+'Impossible d\'acceder a code.google.com; mise à jour annulée'
 		
 		elif r > REVISION:
-			print GR+'[+] '+W+'C\'est la '+G+'nouvelle version'+W+' de wifite.py! (r'+str(r)+')'
+			print GR+'[+] '+W+'Une '+G+'nouvelle version'+W+' de wifite.py est disponible! (r'+str(r)+')' 
 			print GR+'[+] '+W+'changements:'+W
 			print GR+'    -'+d.replace('\n','\n    -')
-			print GR+'[+] '+W+'Mise a jour OK '+G+t+W+'\n'
+			print GR+'[+] '+W+'Mise � jour sortie: '+G+t+W+'\n'
 			print GR+'[+] '+W+'Voulez vous '+G+'télécharger et mettre à jour'+W+' wifite.py? (y/n): '
 			ans=raw_input()
 			if ans.lower()[0] == 'y':
@@ -749,7 +753,7 @@ def main():
 	global root
 	""" where the magic happens """
 	global IFACE, ATTACK, DICT, THIS_MAC, SKIP_TO_WPA, CRACKED, HANDSHAKES, NO_XSERVER
-	global TIME_STARTED, TIME_REMAINING
+	global TIME_STARTED, TIME_REMAINING, ORIGINAL_MAC, ANONYMOUS_MAC
 	
 	ATTEMPTS=0
 	
@@ -848,6 +852,16 @@ def main():
 			print ''
 			print GR+'[+] '+W+'Le temps d\'attente maximum est estimé à '+O+s+W
 		
+		# change mac address if we're using the -anon option
+		if ANONYMOUS_MAC != '':
+			ORIGINAL_MAC=THIS_MAC
+			print GR+'[+] '+G+'changing'+W+' mac address to '+O+ANONYMOUS_MAC+O+'...',
+			sys.stdout.flush()
+			subprocess.call(['ifconfig',IFACE,'down'])
+			subprocess.call(['macchanger','-m',ANONYMOUS_MAC,IFACE],stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
+			subprocess.call(['ifconfig',IFACE,'up'])
+			
+			print ' '+G+'changed!'
 		
 		for x in ATTACK:
 			ATTEMPTS += 1 # increment number of attempts
@@ -856,6 +870,15 @@ def main():
 			# if user breaks during an attack and wants to skip to cracking...
 			if SKIP_TO_WPA:
 				break
+		
+		# change mac address back (if we used the -anon option) before starting the cracks
+		if ORIGINAL_MAC != '':
+			print GR+'[+] '+G+'changing'+W+' mac address back to '+O+str(ORIGINAL_MAC)+W+'...',
+			sys.stdout.flush()
+			subprocess.call(['ifconfig',IFACE,'down'])
+			subprocess.call(['macchanger','-m',ORIGINAL_MAC,IFACE],stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
+			subprocess.call(['ifconfig',IFACE,'up'])
+			print G+"changed"+W
 		
 		if len(WPA_CRACK) > 0 and DICT != '':
 			# we have wpa handshakes to crack!
@@ -988,7 +1011,7 @@ def handle_args(args):
 	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT, STRIP_HANDSHAKE
 	global W, BLA, R, G, O, B, P, C, GR # colors
 	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR, EXIT_IF_NO_FAKEAUTH # wep attacks
-	global REVISION, THEFILE, CHANGE_MAC
+	global REVISION, THEFILE, CHANGE_MAC, ORIGINAL_MAC, ANONYMOUS_MAC
 	
 	# first loop, finds '-no-color' in case the user doesn't want to see any color!
 	for a in args:
@@ -1208,7 +1231,11 @@ def handle_args(args):
 		elif a == '-nostrip' or a == '--no-strip':
 			print GR+'[+] '+W+'Découpage du handshake WPA '+O+'Désactivé'+W+''
 			STRIP_HANDSHAKE=False
-			
+		
+		elif a == '-anon' or a == '--anonymous' or a == '--anon':
+			ANONYMOUS_MAC=random_mac()
+			print GR+'[+] '+W+'anonyme adresse MAC '+G+'Activé'+W+''
+		
 		i += 1
 		
 	if WEP==False and WPA==False:
@@ -1254,6 +1281,14 @@ def halp(full=False):
 		print '             \t Si il ne la trouve pas automatiquement, il va la demander\n'
 	else:
 		print G+'  -i\t   '+GR+'Interface wireless'
+	#ANON
+	if full:
+		print G+'  --anon  \t '+GR+'       anonymizes the attack'
+		print '            \t before beginning the attack, your MAC address is changed to'
+		print '            \t a random MAC address. after the attack is complete, the MAC'
+		print '            \t is then changed back to its original address\n'
+	else:
+		print G+'  -anon\t   '+GR+'anonymizer: change to random mac address before attacking'
 	#DICT
 	if full:
 		print G+'  -d, --dict\t'+GR+'     ex. -d /pentest/passwords/wordlists/darkc0de.lst'
@@ -2998,7 +3033,7 @@ def parsetargets():
 		f.close()
 	except IOError:
 		print R+'\n[!] Le programme est incapable de capturer les paquets airodump!'
-		print R+'[+] SVP Soyez sur que votre interface est en mode moniteur'
+		print R+'[+] SVP vous assurer d\'avoir aircrack-ng v1.1 ou sup�rieur'
 		print R+'[+] Le programme est incapable de continuer et il va se fermer'
 		print W
 		subprocess.call(['rm','-rf',TEMPDIR])
@@ -3087,6 +3122,34 @@ def sec2hms(sec):
 	if s < 10:
 		result += '0'
 	result += str(s)
+	
+	return result
+
+def random_mac():
+	""" generates a random mac address
+		not *too* random, chances of it being from an actual vendor are likely """
+	# ranges used:
+	# 00-00-00 -> 00-27-FF ALL
+	# 00-30-00 -> 00-E0-FF (00-X0-XX)
+	
+	lst=['0','1','2','3','4','5','6','7','8','9','A','B','C','D','E','F']
+	if random.randint(0,1) == 0:
+		result = '00:'
+		temp = str(random.randint(0,27))
+		if len(temp) == 1:
+			temp='0'+temp
+		result+=temp+':'
+		for i in xrange(0,8):
+			result+=lst[random.randint(0,15)]
+			if i % 2 == 1 and i < 7:
+				result+=':'
+	else:
+		result='00:' + lst[random.randint(3,14)] + '0:'
+		
+		for i in xrange(0,8):
+			result+=lst[random.randint(0,15)]
+			if i % 2 == 1 and i < 7:
+				result+=':'
 	
 	return result
 
