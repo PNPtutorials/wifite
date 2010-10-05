@@ -41,7 +41,7 @@ except ImportError:
 	print '[!] Impossible d importer tkinter -- GUI désactivé'
 
 # current revision
-REVISION=54
+REVISION=55
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
