@@ -40,7 +40,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=56
+REVISION=58
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2124,7 +2124,7 @@ def attack_wep_all(index):
 					# show menu!
 					wcount=0 # count number of methods remaining
 					for i in xrange(wepnum+1,len(weps)):
-						if weps[wepnum] == True:
+						if weps[i] == True:
 							wcount += 1
 					if wcount == 0:
 						menu=''
