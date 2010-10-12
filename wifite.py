@@ -6,6 +6,9 @@
 """
 
 """ TODO LIST:
+	-crack at IVS option (-ivs)
+	-chop-chop stops if failed -- have it start again until it runs out of time!
+	
     -find someone to test SKA (my router won't allow it, broken SKA everytime)
     -deauth entire router if SSID is hidden? (no, sets off alarms)
     -convert all subprocess calls to pexpect (maybe?)
@@ -40,7 +43,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=58
+REVISION=59
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -116,6 +119,9 @@ OLD_MAC =''
 ORIGINAL_MAC=''
 ANONYMOUS_MAC=''
 
+# flag for when we are running wifite inside of an XTERM window
+USING_XTERM=False
+
 # COLORS, because i think they're faaaaaabulous
 W  = "\033[0m";  # white (normal)
 BLA= "\033[30m"; # black
@@ -160,6 +166,8 @@ class App:
 		the GIU passes arguments to the script
 	"""
 	def __init__(self, master):
+		global USING_XTERM
+		
 		setenctype='WEP and WPA'
 		setchan   =6
 		setallchan=1
@@ -258,11 +266,22 @@ class App:
 		if lst == [] or len(lst) == 0:
 			print GR+'[!] '+R+'no wireless adapaters found'
 			print GR+'[!] '+O+'make sure your wifi card is plugged in, then check airmon-ng'
+			print W
+			if USING_XTERM:
+				print GR+'[!] '+W+'close this window at any time to exit wifite'+W
+			else:
+				print GR+'[!] '+W+'the program is unable to continue and will now exit'
+			
 			sys.exit(0)
 		elif len(lst) == 1:
 			if lst[0].strip() == '':
 				print GR+'[!] '+R+'no wireless adapaters found'
 				print GR+'[!] '+O+'make sure your wifi card is plugged in, then check airmon-ng'
+				print W
+				if USING_XTERM:
+					print GR+'[!] '+W+'close this window at any time to exit wifite'+W
+				else:
+					print GR+'[!] '+W+'the program is unable to continue and will now exit'
 				sys.exit(0)
 		
 		self.iface.set(default)
@@ -490,6 +509,8 @@ class App:
 	def ifacelist(self):
 		# looks up all interfaces in airmon-ng
 		# returns a tuple, the list of ifaces, and the 'default' -- the one in monitor mode
+		global USING_XTERM
+		
 		lst=[]
 		proc=subprocess.Popen(['airmon-ng'], stdout=subprocess.PIPE)
 		txt=proc.communicate()[0]
@@ -522,7 +543,11 @@ class App:
 		if len(lst) == 0:
 			print R+'[!] no wireless interfaces were found!'
 			print R+'[!] run airmon-ng; check your wireless drivers'
-			print GR+'[+] '+O+'the program will now exit'+W
+			
+			if USING_XTERM:
+				print GR+'[!] '+W+'close this window at any time to exit wifite'+W
+			else:
+				print GR+'[!] '+W+'the program is unable to continue and will now exit'
 			sys.exit(0)
 		
 		return lst, default
@@ -602,6 +627,8 @@ class App:
 		
 		cmd.append('-pps')
 		cmd.append(str(self.weppps.get()))
+		
+		cmd.append('xterm')
 		
 		# save settings
 		f=open('.wifite.conf','w')
@@ -955,6 +982,10 @@ def main():
 				print GR+'    -'+i
 			print W
 		
+		if USING_XTERM:
+			print W
+			print GR+'[!] '+W+'close this window at any time to exit wifite'+W
+		
 	except KeyboardInterrupt:
 		print GR+'\n[!] '+O+'^C interrupt received, '+R+'exiting'+W
 
@@ -1030,7 +1061,7 @@ def handle_args(args):
 	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT, STRIP_HANDSHAKE
 	global W, BLA, R, G, O, B, P, C, GR # colors
 	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR, EXIT_IF_NO_FAKEAUTH # wep attacks
-	global REVISION, THEFILE, CHANGE_MAC, ORIGINAL_MAC, ANONYMOUS_MAC
+	global REVISION, THEFILE, CHANGE_MAC, ORIGINAL_MAC, ANONYMOUS_MAC, USING_XTERM
 	
 	# first loop, finds '-no-color' in case the user doesn't want to see any color!
 	for a in args:
@@ -1255,6 +1286,9 @@ def handle_args(args):
 			ANONYMOUS_MAC=random_mac()
 			print GR+'[+] '+W+'anonymous mac address '+G+'enabled'+W+''
 		
+		elif a == 'xterm':
+			USING_XTERM = True
+			
 		i += 1
 		
 	if WEP==False and WPA==False:
@@ -1447,7 +1481,7 @@ def find_mon():
 	if only one monitor-mode device is found, it is used
 	if multiple monitor-mode devices are found, it asks to pick one
 	"""
-	global IFACE, TEMPDIR
+	global IFACE, TEMPDIR, USING_XTERM
 	
 	ifaces=[]
 	print GR+'[+] '+W+'searching for devices in monitor mode...'
@@ -1481,6 +1515,8 @@ def find_mon():
 			print R+'[!] perhaps you need to install new drivers'
 			print R+'[+] this program will now exit.'
 			print W
+			if USING_XTERM:
+				print GR+'[!] '+W+'close this window at any time to exit wifite'+W
 			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 		elif len(poss) == 1 and IFACE != '' and poss[0].lower() == IFACE.lower():
@@ -2788,7 +2824,7 @@ def gettargets():
 		displays the results to the user, asks for which targets to attack
 		adds targets to ATTACK list and returns
 	"""
-	global IFACE, CHANNEL, TARGETS, CLIENTS, ATTACK, ESSID, TEMPDIR
+	global IFACE, CHANNEL, TARGETS, CLIENTS, ATTACK, ESSID, TEMPDIR, USING_XTERM
 	
 	TIME_START = time.time()
 	waiting = -1
@@ -2914,6 +2950,9 @@ def gettargets():
 			print R+'[+] there are no targets with a power level greater than '+O + str(power) + 'dB'
 			print R+'[+] try selecting a '+O+'lower power threshold'
 			print W
+			if USING_XTERM:
+				print GR+'[!] '+W+'close this window at any time to exit wifite'+W
+				
 			subprocess.call(['rm','-rf',TEMPDIR])
 			sys.exit(0)
 		
@@ -2931,8 +2970,12 @@ def gettargets():
 	print ''
 	if len(TARGETS) == 0:
 		print R+'[!] no targets found! make sure that '+O+'airodump-ng'+R+' is working properly'
-		print R+'[!] the program will now exit'
 		print W
+		if USING_XTERM:
+			print GR+'[!] '+W+'close this window at any time to exit wifite'+W
+		else:
+			print R+'[!] the program will now exit'
+		
 		subprocess.call(['rm','-rf',TEMPDIR])
 		sys.exit(0)
 	
@@ -2990,7 +3033,7 @@ def gettargets():
 
 def parsetargets():
 	"""reads through 'wifite-01.csv' and adds any valid targets to the global list TARGETS """
-	global TARGETS, CLIENTS, WEP, WPA, TEMPDIR, CHANNEL, IFACE, NO_HIDDEN_DEAUTH
+	global TARGETS, CLIENTS, WEP, WPA, TEMPDIR, CHANNEL, IFACE, NO_HIDDEN_DEAUTH, USING_XTERM
 	
 	DEAUTH=[]
 	TARGETS=[]
@@ -3053,7 +3096,11 @@ def parsetargets():
 	except IOError:
 		print R+'\n[!] the program was unable to capture airodump packets!'
 		print R+'[+] please ensure that you have aircrack-ng v1.1 or above installed'
-		print R+'[+] the program is unable to continue and will now exit'
+		if USING_XTERM:
+			print GR+'[!] '+W+'close this window at any time to exit wifite'+W
+		else:
+			print R+'[!] the program is unable to continue and will now exit'
+		
 		print W
 		subprocess.call(['rm','-rf',TEMPDIR])
 		sys.exit(0)

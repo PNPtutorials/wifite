@@ -1,5 +1,5 @@
-# -*- coding: iso-8859-15 -*-
 #!/usr/bin/python
+# -*- coding: utf-8 -*-
 
 """ WIFITE
     (c) 2010 derv merkler
@@ -41,7 +41,7 @@ except ImportError:
 	print '[!] Impossible d importer tkinter -- GUI d�sactiv�'
 
 # current revision
-REVISION=58
+REVISION=59
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
