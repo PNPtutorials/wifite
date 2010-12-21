@@ -43,7 +43,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=59
+REVISION=60
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2974,7 +2974,7 @@ def gettargets():
 		if USING_XTERM:
 			print GR+'[!] '+W+'close this window at any time to exit wifite'+W
 		else:
-			print R+'[!] the program will now exit'
+			print R+'[!] the program will now exit'+W
 		
 		subprocess.call(['rm','-rf',TEMPDIR])
 		sys.exit(0)
