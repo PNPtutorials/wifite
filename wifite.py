@@ -2421,18 +2421,24 @@ def attack_fakeauth_intel(index):
 	cmd='wpa_supplicant -cfake.conf -iwlan0 -Dwext -dd'
 	print GR+'[+] '+W+'executing command: '+G+cmd+W+''
 	print GR+'[+] '+W+'30-second timeout starting now...'
-	
-	proc_intel=pexpect.spawn(cmd)
 	try:
-		proc_intel.expect('State: ASSOCIATED -> COMPLETED', timeout=30)
-		print GR+'[+] '+W+'received '+G+'State: ASSOCIATED -> COMPLETED'+W
-		return True
-	except pexpect.TIMEOUT:
-		print R+'[+] did not receive '+O+'State: ASSOCIATED -> COMPLETED'
-		# kill the child process
-		proc_intel.close(force=True)
+		proc_intel=pexpect.spawn(cmd)
+		try:
+			proc_intel.expect('State: ASSOCIATED -> COMPLETED', timeout=30)
+			print GR+'[+] '+W+'received '+G+'State: ASSOCIATED -> COMPLETED'+W
+			return True
+		except pexpect.TIMEOUT:
+			print R+'[+] did not receive '+O+'State: ASSOCIATED -> COMPLETED'
+			# kill the child process
+			try:
+				proc_intel.close(force=True)
+			except pexpect.ExceptionPexpect:
+				print GR+'[+] '+W+'received '+O+'ExceptionPexpect'+W
+	except OSError:
+		print GR+'[+] '+W+'received '+O+'OSError'+W
 	
 	print R+'[!]        wpa_supplicant workaround failed!'
+	
 	#print R+'[!]        wpa_supplicant output:'
 	#print '          ' + txt.strip().replace('\n','\n          ')
 	print W
