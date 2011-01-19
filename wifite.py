@@ -43,7 +43,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=63
+REVISION=64
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -891,7 +891,7 @@ def main():
 			print GR+'[+] '+W+'estimated maximum wait time is '+O+s+W
 		
 		# change mac address if we're using the -anon option
-		if ANONYMOUS_MAC != '':
+		if ANONYMOUS_MAC != '' and len(ATTACK) != 0:
 			ORIGINAL_MAC=THIS_MAC
 			print GR+'[+] '+G+'changing'+W+' mac address to '+O+ANONYMOUS_MAC+O+'...',
 			sys.stdout.flush()
