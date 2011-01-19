@@ -43,7 +43,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=62
+REVISION=63
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2434,6 +2434,10 @@ def attack_fakeauth_intel(index):
 				proc_intel.close(force=True)
 			except pexpect.ExceptionPexpect:
 				print GR+'[+] '+W+'received '+O+'ExceptionPexpect'+W
+			except OSError:
+				print GR+'[+] '+W+'received '+O+'OSError'+W
+		except OSError:
+			print GR+'[+] '+W+'received '+O+'OSError'+W
 	except OSError:
 		print GR+'[+] '+W+'received '+O+'OSError'+W
 	
@@ -2619,12 +2623,12 @@ def attack_wpa(index):
 			sys.stdout.flush()
 			
 			# check for handshake using aircrack
-			crack='echo "" | aircrack-ng -a 2 -w - -e "' + TARGETS[index][8] + '" '+TEMPDIR+'wpa-01.cap'
-			proc_crack = subprocess.Popen(crack, stdout=subprocess.PIPE, stderr=open(os.devnull, 'w'), shell=True)
-			proc_crack.wait()
-			txt=proc_crack.communicate()
-			
-			if txt[0].find('Passphrase not in dictionary') != -1:
+			#crack='echo "" | aircrack-ng -a 2 -w - -e "' + TARGETS[index][8] + '" '+TEMPDIR+'wpa-01.cap'
+			#proc_crack = subprocess.Popen(crack, stdout=subprocess.PIPE, stderr=open(os.devnull, 'w'), shell=True)
+			#proc_crack.wait()
+			#txt=proc_crack.communicate()
+			if has_handshake(TEMPDIR+'wpa-01.cap', TARGETS[index][8]):
+			# if txt[0].find('Passphrase not in dictionary') != -1:
 				# we got the handshake
 				got_handshake=True
 				
@@ -2810,6 +2814,49 @@ def attack_wpa(index):
 		pass
 	except UnboundLocalError:
 		pass
+
+def has_handshake(capfile, essid):
+  result = False
+  
+  proc_pyrit = subprocess.Popen('which pyrit', stdout=subprocess.PIPE, stderr=open(os.devnull,'w'), shell=True)
+  proc_pyrit.wait()
+  
+  if proc_pyrit.communicate() != '':
+    #crack = 'pyrit -r ' + capfile + ' -o temp.cap strip'
+    #proc_crack = subprocess.Popen(crack, stdout=subprocess.PIPE, stderr=open(os.devnull,'w'),shell=True)
+    #proc_crack.wait()
+    crack = 'pyrit -r '+capfile+' analyze'
+    proc_crack = subprocess.Popen(crack, stdout=subprocess.PIPE, stderr=open(os.devnull,'w'),shell=True)
+    proc_crack.wait()
+    txtraw=proc_crack.communicate()
+    txt=txtraw[0].split('\n')
+    right_essid = False
+    for line in txt:
+      if line == '' or line == None:
+        continue
+      
+      #print str(right_essid) + ": " + line
+      if line.find("AccessPoint") != -1:
+        right_essid = (line.find("('" + essid + "')") != -1)
+      
+      if right_essid:
+        if line.find(', good, ') != -1 or line.find(', workable, ') != -1 or line.find(', bad, ') != -1:
+          result = True
+          break
+    
+    #print ''
+    
+  else:
+    crack='echo "" | aircrack-ng -a 2 -w - -e "' + TARGETS[index][8] + '" '+TEMPDIR+'wpa-01.cap'
+    proc_crack = subprocess.Popen(crack, stdout=subprocess.PIPE, stderr=open(os.devnull, 'w'), shell=True)
+    proc_crack.wait()
+    txt=proc_crack.communicate()
+    if txt[0].find('Passphrase not in dictionary') != -1:
+      result = False
+    else:
+      result = True
+      
+  return result
 
 def get_time(maxwait, starttime):
 	""" returns the time remaining based on maxwait and starttime

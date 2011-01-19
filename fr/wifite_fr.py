@@ -41,7 +41,7 @@ except ImportError:
 	print '[!] Impossible d importer tkinter -- GUI d�sactiv�'
 
 # current revision
-REVISION=60
+REVISION=63
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2575,12 +2575,13 @@ def attack_wpa(index):
 			sys.stdout.flush()
 			
 			# check for handshake using aircrack
-			crack='echo "" | aircrack-ng -a 2 -w - -e "' + TARGETS[index][8] + '" '+TEMPDIR+'wpa-01.cap'
-			proc_crack = subprocess.Popen(crack, stdout=subprocess.PIPE, stderr=open(os.devnull, 'w'), shell=True)
-			proc_crack.wait()
-			txt=proc_crack.communicate()
+			#crack='echo "" | aircrack-ng -a 2 -w - -e "' + TARGETS[index][8] + '" '+TEMPDIR+'wpa-01.cap'
+			#proc_crack = subprocess.Popen(crack, stdout=subprocess.PIPE, stderr=open(os.devnull, 'w'), shell=True)
+			#proc_crack.wait()
+			#txt=proc_crack.communicate()
 			
-			if txt[0].find('Passphrase not in dictionary') != -1:
+			#if txt[0].find('Passphrase not in dictionary') != -1:
+                        if has_handshake(TEMPDIR+'wpa-01.cap', TARGETS[index][8]):
 				# we got the handshake
 				got_handshake=True
 				
@@ -2766,6 +2767,37 @@ def attack_wpa(index):
 		pass
 	except UnboundLocalError:
 		pass
+
+def has_handshake(capfile, essid):
+  result = False
+  
+  proc_pyrit = subprocess.Popen('which pyrit', stdout=subprocess.PIPE, stderr=open(os.devnull,'w'), shell=True)
+  proc_pyrit.wait()
+  
+  if proc_pyrit.communicate() != '':
+    #crack = 'pyrit -r ' + capfile + ' -o temp.cap strip'
+    #proc_crack = subprocess.Popen(crack, stdout=subprocess.PIPE, stderr=open(os.devnull,'w'),shell=True)
+    #proc_crack.wait()
+    crack = 'pyrit -r '+capfile+' analyze'
+    proc_crack = subprocess.Popen(crack, stdout=subprocess.PIPE, stderr=open(os.devnull,'w'),shell=True)
+    proc_crack.wait()
+    txtraw=proc_crack.communicate()
+    txt=txtraw[0].split('\n')
+    right_essid = False
+    for line in txt:
+      if line == '' or line == None:
+        continue
+      
+      #print str(right_essid) + ": " + line
+      if line.find("AccessPoint") != -1:
+        right_essid = (line.find("('" + essid + "')") != -1)
+      
+      if right_essid:
+        if line.find(', good, ') != -1 or line.find(', workable, ') != -1 or line.find(', bad, ') != -1:
+          result = True
+          break
+    
+    #print ''
 
 def get_time(maxwait, starttime):
 	""" returns the time remaining based on maxwait and starttime
