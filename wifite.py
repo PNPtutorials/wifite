@@ -2,7 +2,7 @@
 # -*- coding: cp1252 -*-
 
 """ WIFITE
-    (c) 2010 derv merkler
+    (c) 2010 derv merkler, Jose Maria Chia
 """
 
 """ TODO LIST:
@@ -43,7 +43,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=64
+REVISION=65
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -57,7 +57,7 @@ DICT=''
 # name of access point to attack (useful for targeting specific APs)
 # also, the 'power' is stored in ESSID. ex: ESSID='pow>55' would crack all APs above 55dB
 ESSID=''
-
+TIMEWAITINGCLIENTS = 5 #Time listening for associated clients
 # WPA variables
 WPA=True        # True=search for WPA access points; False=do not search for WPA access points
 WPA_TIMEOUT=3.0 # how long to wait between deauthentications (in seconds)
@@ -66,7 +66,7 @@ WPA_MAXWAIT=300 # longest time to wait for a handshake capture (in seconds)
 
 # WEP constants
 WEP=True          # True=search for WEP access points; False=do not search for WEP access points
-WEP_PPS    =400   # packets per second (lower for APs that are farther away)
+WEP_PPS    =250   # packets per second (lower for APs that are farther away)
 WEP_MAXWAIT=600   # longest to wait for a WEP attack *METHOD* to finish (in seconds)
                   # if wep_maxwait is 600, it gives 10minutes FOR EACH ATTACK METHOD (frag, chopchop, arp, p0841)
                   # meaning a TOTAL of 40min per WEP access point (not including fake-authentication)
@@ -1061,7 +1061,7 @@ def handle_args(args):
 	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT, STRIP_HANDSHAKE
 	global W, BLA, R, G, O, B, P, C, GR # colors
 	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR, EXIT_IF_NO_FAKEAUTH # wep attacks
-	global REVISION, THEFILE, CHANGE_MAC, ORIGINAL_MAC, ANONYMOUS_MAC, USING_XTERM
+	global REVISION, THEFILE, CHANGE_MAC, ORIGINAL_MAC, ANONYMOUS_MAC, USING_XTERM,AUTOCRACK,TIMEWAITINGCLIENTS
 	
 	# first loop, finds '-no-color' in case the user doesn't want to see any color!
 	for a in args:
@@ -1231,6 +1231,28 @@ def handle_args(args):
 				sys.exit(0)
 			i=i+1
 		
+		elif a == '-twclients' or a == '--timewaitingclients':
+			try:
+				TIMEWAITINGCLIENTS=int(args[i+1])
+				print GR+'[+] '+W+'set Time waiting clients: '+G+str(TIMEWAITINGCLIENTS)+' seconds'
+			except Exception:
+				print R+'[!] error! invalid arguments'
+				print R+'[!] the program will now exit'
+				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
+				sys.exit(0)
+			i=i+1
+		elif a == '-autocrack' or a == '--autocrack':
+			try:
+				AUTOCRACK=int(args[i+1])
+				print GR+'[+] '+W+'set AUTOCRACK: '+G+str(AUTOCRACK)+' ivs'
+			except Exception:
+				print R+'[!] error! invalid arguments'
+				print R+'[!] the program will now exit'
+				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
+				sys.exit(0)
+			i=i+1
 		elif a == '-pps' or a == '--pps':
 			try:
 				WEP_PPS=int(args[i+1])
@@ -1423,6 +1445,18 @@ def halp(full=False):
 		print G+'  --no-color\t '+GR+'do not display annoying colors (use system colors)\n'
 	else:
 		print G+'  -nocolor '+GR+'do not use colored text (use system colors)'
+	#AUTOCRACK
+	if full:
+		print G+'  --autocrack\t'+GR+'     e.g. -autocrack 500'
+		print   '             \t set minimun quantity of ivs to start cracking\n'
+	else:
+		print G+'  -autocrack '+GR+'set minimun quantity of ivs to start cracking'
+	#TWCLIENTS
+	if full:
+		print G+'  --timewaitingclients\t'+GR+'     e.g. --timewaitingclients 30'
+		print   '             \t set the time in seconds waiting for clients\n'
+	else:
+		print G+'  -twclients '+GR+'set the time in seconds waiting for clients\n'
 	
 	
 	print GR+'\n  FILTERS'
@@ -1778,7 +1812,7 @@ def attack_wep_all(index):
 	global THIS_MAC, WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841
 	global AUTOCRACK, CRACKED, OLD_MAC, TEMPDIR, EXIT_IF_NO_FAKEAUTH
 	global SKIP_TO_WPA, WPA_CRACK, EXIT_PROGRAM # to exit early
-	global HAS_INTEL4965, THEFILE, CHANGE_MAC
+	global HAS_INTEL4965, THEFILE, CHANGE_MAC, DICT
 	
 	# to keep track of how long we are taking
 	TIME_START=time.time()
@@ -2092,7 +2126,7 @@ def attack_wep_all(index):
 					ivs += total_ivs # in case we got IVS from another attack
 					
 					# check if it's time to start the auto-crack and we have not started cracking...
-					if ivs > AUTOCRACK and started_crack==False:
+					if ivs >= AUTOCRACK and started_crack==False:
 						started_crack=True
 						# overwrite the current line
 						print '\r'+GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+W+'started cracking WEP key ('+G+'+'+\
@@ -2103,7 +2137,7 @@ def attack_wep_all(index):
 										 stderr=open(os.devnull, 'w'))
 						time.sleep(0.1)
 						
-						cmd='aircrack-ng -a 1 -l '+TEMPDIR+'wepkey.txt '+TEMPDIR+'wep-*.ivs'
+						cmd='aircrack-ng -a 1 -l '+TEMPDIR+'wepkey.txt '+TEMPDIR+'wep-*.ivs -w '+DICT
 						proc_crack = subprocess.Popen(cmd,shell=True,stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
 					
 					# check if we've cracked it
@@ -2877,7 +2911,7 @@ def gettargets():
 		displays the results to the user, asks for which targets to attack
 		adds targets to ATTACK list and returns
 	"""
-	global IFACE, CHANNEL, TARGETS, CLIENTS, ATTACK, ESSID, TEMPDIR, USING_XTERM
+	global IFACE, CHANNEL, TARGETS, CLIENTS, ATTACK, ESSID, TEMPDIR, USING_XTERM,TIMEWAITINGCLIENTS
 	
 	TIME_START = time.time()
 	waiting = -1
@@ -2921,7 +2955,7 @@ def gettargets():
 				if waiting==-1:
 					for x in xrange(0, len(TARGETS)):
 						if TARGETS[x][8].lower() == ESSID.lower():
-							print GR+'\n[+] '+W+'found "'+G+ESSID+W+'", waiting '+G+'5 sec'+W+' for clients...',
+							print GR+'\n[+] '+W+'found "'+G+ESSID+W+'", waiting '+G+str(TIMEWAITINGCLIENTS)+' sec'+W+' for clients...',
 							sys.stdout.flush()
 							ATTACK=[x+1]
 							waiting=0
@@ -2929,15 +2963,15 @@ def gettargets():
 				else:
 					for x in xrange(0, len(TARGETS)):
 						if TARGETS[x][8].lower() == ESSID.lower():
-							print GR+'\r[+] '+W+'found "'+G+ESSID+W+'", waiting '+G+str(5-waiting)+' sec'+W+' for clients...',
+							print GR+'\r[+] '+W+'found "'+G+ESSID+W+'", waiting '+G+str(TIMEWAITINGCLIENTS-waiting)+' sec'+W+' for clients...',
 							waiting += 1
 							ATTACK=[x+1]
 							
-							if waiting == 6:
+							if waiting == TIMEWAITINGCLIENTS:
 								break
 							
 					
-					if waiting == 6:
+					if waiting == TIMEWAITINGCLIENTS:
 						break
 					sys.stdout.flush()
 			else:
@@ -2946,7 +2980,7 @@ def gettargets():
 				
 				if ESSID == 'all' or ESSID.startswith('pow>'):
 					# wait for 10 seconds, then start cracking
-					if time.time() - TIME_START >= 15:
+					if time.time() - TIME_START >= TIMEWAITINGCLIENTS+10:
 						break
 				sys.stdout.flush()
 			
@@ -2957,7 +2991,7 @@ def gettargets():
 	except KeyboardInterrupt:
 		#print GR+'[+] '+O+'killing airodump-ng process (pid ' + str(proc.pid) + ') ...'+W
 		print ''
-		waiting=6
+		waiting=TIMEWAITINGCLIENTS
 		try:
 			os.kill(proc.pid, signal.SIGTERM)
 		except UnboundLocalError:
@@ -3014,7 +3048,7 @@ def gettargets():
 		
 	elif ESSID != '':
 		# see if we found the SSID we're looking for
-		if waiting == 6:
+		if waiting == TIMEWAITINGCLIENTS:
 			#print '[+] found "' + ESSID + '"!'
 			return
 		else:
