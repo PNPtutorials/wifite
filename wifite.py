@@ -2,17 +2,19 @@
 # -*- coding: cp1252 -*-
 
 """ WIFITE
-    (c) 2010 derv merkler, Jose Maria Chia
+    (c) 2010, 2011 derv merkler, Jose Maria Chia, Aaron
+    
+    Type -h or -help for command-line options
 """
 
 """ TODO LIST:
 	-crack at IVS option (-ivs)
 	-chop-chop stops if failed -- have it start again until it runs out of time!
 	
-    -find someone to test SKA (my router won't allow it, broken SKA everytime)
-    -deauth entire router if SSID is hidden? (no, sets off alarms)
-    -convert all subprocess calls to pexpect (maybe?)
-    -convert subprocess.call('rm', to os.remove(
+	-find someone to test SKA (my router won't allow it, broken SKA everytime)
+	-deauth entire router if SSID is hidden? (no, sets off alarms)
+	-convert all subprocess calls to pexpect (maybe?)
+	-convert subprocess.call('rm', to os.remove(
 """
 
 import string, sys # basic stuff
@@ -43,7 +45,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=65
+REVISION=66
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -63,6 +65,10 @@ WPA=True        # True=search for WPA access points; False=do not search for WPA
 WPA_TIMEOUT=3.0 # how long to wait between deauthentications (in seconds)
 WPA_MAXWAIT=300 # longest time to wait for a handshake capture (in seconds)
 # you can temporarily change maxwait with -wpaw <time> where time is in minutes
+
+# airodump variables
+SCAN_MAXWAIT=0 # absolute time to wait for target scanning (in seconds), defaults to until cancelled
+# you can change with -scanw <time> or --scan-maxwait <time> where time is in seconds
 
 # WEP constants
 WEP=True          # True=search for WEP access points; False=do not search for WEP access points
@@ -1061,7 +1067,7 @@ def handle_args(args):
 	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT, STRIP_HANDSHAKE
 	global W, BLA, R, G, O, B, P, C, GR # colors
 	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR, EXIT_IF_NO_FAKEAUTH # wep attacks
-	global REVISION, THEFILE, CHANGE_MAC, ORIGINAL_MAC, ANONYMOUS_MAC, USING_XTERM,AUTOCRACK,TIMEWAITINGCLIENTS
+	global REVISION, THEFILE, CHANGE_MAC, ORIGINAL_MAC, ANONYMOUS_MAC, USING_XTERM, AUTOCRACK, TIMEWAITINGCLIENTS, SCAN_MAXWAIT
 	
 	# first loop, finds '-no-color' in case the user doesn't want to see any color!
 	for a in args:
@@ -1242,6 +1248,24 @@ def handle_args(args):
 				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			i=i+1
+			
+		elif a == '-scanw' or a == '--scan-wait':
+			try:
+				SCAN_MAXWAIT=int(args[i+1])
+				print GR+'[+] '+W+'set target scan wait time:',
+				if SCAN_MAXWAIT == 0:
+					print G+'unlimited'
+				else:
+					print G+str(SCAN_MAXWAIT)+' seconds'
+				
+			except Exception:
+				print R+'[!] error! invalid arguments'
+				print R+'[!] the program will now exit'
+				print W
+				subprocess.call(['rm','-rf',TEMPDIR])
+				sys.exit(0)
+			i=i+1		
+						
 		elif a == '-autocrack' or a == '--autocrack':
 			try:
 				AUTOCRACK=int(args[i+1])
@@ -1456,8 +1480,13 @@ def halp(full=False):
 		print G+'  --timewaitingclients\t'+GR+'     e.g. --timewaitingclients 30'
 		print   '             \t set the time in seconds waiting for clients\n'
 	else:
-		print G+'  -twclients '+GR+'set the time in seconds waiting for clients\n'
-	
+		print G+'  -twclients '+GR+'set the time in seconds waiting for clients'
+	#SCANWAIT
+        if full:
+		print G+'  --scan-wait\t'+GR+'     e.g. --scan-wait 20'
+		print   '             \t set the time in seconds to wait for targets\n'
+	else:
+		print G+'  -scanw     '+GR+'set the time in seconds to wait for targets\n'
 	
 	print GR+'\n  FILTERS'
 	#ESSID
@@ -2911,7 +2940,7 @@ def gettargets():
 		displays the results to the user, asks for which targets to attack
 		adds targets to ATTACK list and returns
 	"""
-	global IFACE, CHANNEL, TARGETS, CLIENTS, ATTACK, ESSID, TEMPDIR, USING_XTERM,TIMEWAITINGCLIENTS
+	global IFACE, CHANNEL, TARGETS, CLIENTS, ATTACK, ESSID, TEMPDIR, USING_XTERM, TIMEWAITINGCLIENTS, SCAN_MAXWAIT
 	
 	TIME_START = time.time()
 	waiting = -1
@@ -2983,6 +3012,10 @@ def gettargets():
 					if time.time() - TIME_START >= TIMEWAITINGCLIENTS+10:
 						break
 				sys.stdout.flush()
+			
+			if SCAN_MAXWAIT and time.time() - TIME_START >= SCAN_MAXWAIT:
+				sys.stdout.flush()
+				break
 			
 		print W
 		
