@@ -45,7 +45,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=66
+REVISION=67
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -930,8 +930,8 @@ def main():
 			print '' # blank line to space things out
 			for i in xrange(0, len(WPA_CRACK)):
 				wpa_crack(i)
-				if WPA_CRACK[len(WPA_CRACK)-1] == ['','']:
-					WPA_CRACK.remove(['',''])
+				if WPA_CRACK[len(WPA_CRACK)-1] == ['','','']:
+					WPA_CRACK.remove(['','',''])
 					break
 		
 		# at this point, the attacks are complete.
@@ -1131,7 +1131,7 @@ def handle_args(args):
 		elif a == '-c' or a == '--chan':
 			try:
 				CHANNEL=args[i+1]
-				print GR+'[+] '+W+'only looking for networks on "'+G + CHANNEL + W+'"'
+				print GR+'[+] '+W+'only looking for networks on '+G+'channel '+ CHANNEL + W+''
 			except IndexError:
 				print R+'[!] error! invalid argument format'
 				print R+'[!] the program will now exit'
@@ -1661,7 +1661,8 @@ def wpa_crack(index):
 	
 	filename=WPA_CRACK[index][0]
 	ssid    =WPA_CRACK[index][1]
-	
+	bssid   =WPA_CRACK[index][2]
+        
 	print GR+'['+sec2hms(0)+'] '+W+'started cracking WPA key for "'+G + ssid + W+'";',
 	
 	# calculate number of passwords we will try
@@ -1739,7 +1740,7 @@ def wpa_crack(index):
 			f = open(TEMPDIR+'wpakey.txt','r')
 			cracked=f.readlines()[0]
 			print '\n'+GR+'['+sec2hms(time.time()-START_TIME)+'] '+G+'cracked "' + ssid + '"! the key is: "'+C+cracked+G+'"'
-			logit('cracked WPA key for "' + ssid + '", the key is: "' + cracked + '"')
+			logit('cracked WPA key for "' + ssid + '" (' + bssid + '), the key is: "' + cracked + '"')
 			CRACKED += 1
 			
 		else:
@@ -1759,7 +1760,7 @@ def wpa_crack(index):
 			print GR+'[+] '+W+'enter option ('+G+'c'+W+' or '+R+'e'+W+'):',
 			typed=raw_input()
 			if typed == 'e':
-				WPA_CRACK.append(['',''])
+				WPA_CRACK.append(['','',''])
 	
 	try:
 		os.kill(proc_crack.pid, signal.SIGTERM)
@@ -2640,7 +2641,7 @@ def attack_wpa(index):
 		#print R+ '[+] '+R+'aborting handshake capture'
 		
 		# add the handshake to the cracking list
-		WPA_CRACK.append(['hs/'+temp+'.cap', TARGETS[index][8]])
+		WPA_CRACK.append(['hs/'+temp+'.cap', TARGETS[index][8], TARGETS[index][0]])
 		return
 	
 	TIME_START=time.time()
@@ -2690,7 +2691,7 @@ def attack_wpa(index):
 			#proc_crack = subprocess.Popen(crack, stdout=subprocess.PIPE, stderr=open(os.devnull, 'w'), shell=True)
 			#proc_crack.wait()
 			#txt=proc_crack.communicate()
-			if has_handshake(TEMPDIR+'wpa-01.cap', TARGETS[index][8]):
+			if has_handshake(TEMPDIR+'wpa-01.cap', TARGETS[index][8], TARGETS[index][0]):
 			# if txt[0].find('Passphrase not in dictionary') != -1:
 				# we got the handshake
 				got_handshake=True
@@ -2757,7 +2758,7 @@ def attack_wpa(index):
 				HANDSHAKES += 1
 				
 				# add the filename and SSID to the list of 'to-crack' after everything's done
-				WPA_CRACK.append([temp+'.cap', TARGETS[index][8]])
+				WPA_CRACK.append([temp+'.cap', TARGETS[index][8], TARGETS[index][0]])
 				break
 				
 			else:
@@ -2878,7 +2879,7 @@ def attack_wpa(index):
 	except UnboundLocalError:
 		pass
 
-def has_handshake(capfile, essid):
+def has_handshake(capfile, essid, bssid):
   result = False
   
   proc_pyrit = subprocess.Popen('which pyrit', stdout=subprocess.PIPE, stderr=open(os.devnull,'w'), shell=True)
@@ -2900,7 +2901,7 @@ def has_handshake(capfile, essid):
       
       #print str(right_essid) + ": " + line
       if line.find("AccessPoint") != -1:
-        right_essid = (line.find("('" + essid + "')") != -1)
+        right_essid = (line.find("('" + essid + "')") != -1) and (line.lower().find(bssid.lower()))
       
       if right_essid:
         if line.find(', good, ') != -1 or line.find(', workable, ') != -1 or line.find(', bad, ') != -1:
