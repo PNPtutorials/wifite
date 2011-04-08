@@ -25,6 +25,7 @@ import re          # reg-ex: for replacing characters in strings
 import urllib      # needed for downloading webpages (updating the script)
 import tempfile    # for creating temporary directory
 import random      # for random mac address
+import sqlite3	 # Database logging
 
 try:
 	import pexpect # used during wpa_supplicant attacks
@@ -1362,6 +1363,13 @@ def logit(txt):
 	f.write(datetime()+' ' + txt +'\n')
 	f.close()
 
+def sqllogit(enc, essid, bssid, key, ascii=""):
+	db = sqlite3.connect('log.db', isolation_level=None)
+	db.execute("CREATE TABLE IF NOT EXISTS log(id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp int, enc text, essid text, bssid text, key text, ascii text)")
+	db.execute("INSERT INTO log (timestamp, enc, essid, bssid, key, ascii) VALUES (%i, '%s', '%s', '%s', '%s', '%s')" % (time.time(), enc, essid, bssid, key, ascii))
+	db.close()
+
+
 ############################################################################### halp
 def halp(full=False):
 	""" displays the help screen 
@@ -1770,6 +1778,7 @@ def wpa_crack(index):
 			cracked=f.readlines()[0]
 			print '\n'+GR+'['+sec2hms(time.time()-START_TIME)+'] '+G+'cracked "' + ssid + '"! the key is: "'+C+cracked+G+'"'
 			logit('cracked WPA key for "' + ssid + '" (' + bssid + '), the key is: "' + cracked + '"')
+			sqllogit('WPA', ssid, bssid, cracked)
 			CRACKED += 1
 			
 		else:
@@ -2345,8 +2354,10 @@ def attack_wep_all(index):
 						# only print the ascii version to the log file if it does not contain non-printable characters
 						if to_ascii(pw).find('non-print') == -1:
 							logit('cracked WEP key for "'+TARGETS[index][8]+'", the key is: "'+pw+'", in ascii: "' + to_ascii(pw) +'"')
+							sqllogit('WEP', TARGETS[index][8], "", pw, to_ascii(pw))
 						else:
 							logit('cracked WEP key for "'+TARGETS[index][8]+'", the key is: "'+pw+'"')
+							sqllogit('WEP', TARGETS[index][8], "", pw)
 						
 						break # break out of this method's while
 					
