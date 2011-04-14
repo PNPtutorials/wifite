@@ -2537,7 +2537,7 @@ def attack_wep_all(index):
 					
 					break
 					
-				if WEP_MAXWAIT != 0 and (time.time() - TIME_START) >= WEP_MAXWAIT:
+				if WEP_MAXWAIT != 0 and (time.time() - TIME_START) >= WEP_MAXWAIT and (ivsps < 100):
 					wcount=0 # count number of methods remaining
 					for i in xrange(wepnum+1,len(weps)):
 						if weps[wepnum] == True:
