@@ -2373,10 +2373,10 @@ def attack_wep_all(index):
 						# only print the ascii version to the log file if it does not contain non-printable characters
 						if to_ascii(pw).find('non-print') == -1:
 							logit('cracked WEP key for "'+TARGETS[index][8]+'", the key is: "'+pw+'", in ascii: "' + to_ascii(pw) +'"')
-							sqllogit('WEP', TARGETS[index][8], "", pw, to_ascii(pw))
+							sqllogit('WEP', TARGETS[index][8], TARGETS[index][0], pw, to_ascii(pw))
 						else:
 							logit('cracked WEP key for "'+TARGETS[index][8]+'", the key is: "'+pw+'"')
-							sqllogit('WEP', TARGETS[index][8], "", pw)
+							sqllogit('WEP', TARGETS[index][8], TARGETS[index][0], pw)
 						
 						break # break out of this method's while
 					
@@ -2545,7 +2545,7 @@ def attack_wep_all(index):
 							break
 					if wcount > 0:
 						print '\n'+R+'[+] '+wepname[wepnum]+' attack ran out of time',
-						updatesqlstatus('u[+] '+wepname[wepnum]+' attack ran out of time')
+						updatesqlstatus('[+] '+wepname[wepnum]+' attack ran out of time')
 			# end of while loop
 			print W
 			
