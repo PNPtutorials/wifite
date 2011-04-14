@@ -272,6 +272,7 @@ class App:
 		(lst,default)=self.ifacelist()
 		
 		print GR+'[+] '+W+'wireless devices: "'+G+ ', '.join(lst) +W+'"'
+		updatesqlstatus('[+] wireless devices: "' + ', '.join(lst) +'"')
 		if lst == [] or len(lst) == 0:
 			print GR+'[!] '+R+'no wireless adapaters found'
 			print GR+'[!] '+O+'make sure your wifi card is plugged in, then check airmon-ng'
@@ -648,6 +649,7 @@ class App:
 		t.start()
 		root.destroy()
 		#print '[+] exiting...'
+		updatesqlstatus('[+] exiting...')
 		
 	
 	def doit(self, args):
@@ -656,6 +658,7 @@ class App:
 		for a in args:
 			cmd.append(a)
 		print GR+'[+] '+G+'executing: '+W+ './' + THEFILE+' ' + ' '.join(args)
+		updatesqlstatus('[+] executing: ./' + THEFILE+' ' + ' '.join(args))
 		try:
 			subprocess.call(cmd)
 		except AttributeError:
@@ -898,11 +901,13 @@ def main():
 			
 			print ''
 			print GR+'[+] '+W+'estimated maximum wait time is '+O+s+W
+			updatesqlstatus('[+] estimated maximum wait time is '+s)
 		
 		# change mac address if we're using the -anon option
 		if ANONYMOUS_MAC != '' and len(ATTACK) != 0:
 			ORIGINAL_MAC=THIS_MAC
 			print GR+'[+] '+G+'changing'+W+' mac address to '+O+ANONYMOUS_MAC+O+'...',
+			updatesqlstatus('[+] changing mac address to '+ANONYMOUS_MAC+'...')
 			sys.stdout.flush()
 			subprocess.call(['ifconfig',IFACE,'down'])
 			subprocess.call(['macchanger','-m',ANONYMOUS_MAC,IFACE],stdout=open(os.devnull,'w'),stderr=open(os.devnull,'w'))
@@ -1123,6 +1128,7 @@ def handle_args(args):
 			try:
 				IFACE=args[i+1]
 				print GR+'[+] '+W+'using wireless interface "'+G + IFACE + W+'"'
+				updatesqlstatus('[+] using wireless interface "' + IFACE + '"')
 			except IndexError:
 				print R+'[!] error! invalid argument format'
 				print R+'[!] the program will now exit'
@@ -1153,6 +1159,7 @@ def handle_args(args):
 					else:
 						ESSID = 'all'
 						print GR+'[+] '+W+'targeting essid "'+G + ESSID + W+'"'
+						updatesqlstatus('[+] targeting essid "' + ESSID + '"')
 			except IndexError:
 				print R+'[!] error! invalid argument format'
 				print R+'[!] the program will now exit'
@@ -1167,6 +1174,7 @@ def handle_args(args):
 			else:
 				ESSID = 'all'
 				print GR+'[+] '+W+'targeting essid "'+G + ESSID + W+'"'
+				updatesqlstatus('[+] targeting essid "' + ESSID + '"')
 			
 		elif a == '-p' or a == '--power':
 			try:
@@ -1367,6 +1375,11 @@ def sqllogit(enc, essid, bssid, key, ascii=""):
 	db = sqlite3.connect('log.db', isolation_level=None)
 	db.execute("CREATE TABLE IF NOT EXISTS log(id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp int, enc text, essid text, bssid text, key text, ascii text)")
 	db.execute("INSERT INTO log (timestamp, enc, essid, bssid, key, ascii) VALUES (%i, '%s', '%s', '%s', '%s', '%s')" % (time.time(), enc, essid, bssid, key, ascii))
+	db.close()
+def updatesqlstatus(text):
+ 	db = sqlite3.connect('log.db', isolation_level=None)
+	db.execute("CREATE TABLE IF NOT EXISTS status(id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp int, status text)")
+	db.execute("INSERT INTO status (timestamp, status) VALUES (%i, '%s')" % (time.time(), text))
 	db.close()
 
 
@@ -1631,6 +1644,7 @@ def find_mon():
 					err=True
 			poss[num-1] = poss[num-1][:poss[num-1].find('\t')]
 			print GR+'[+] '+W+'putting "'+G + poss[num-1] + W+'" into monitor mode...'
+			updatesqlstatus('[+] putting "' + poss[num-1] + '" into monitor mode...')
 			subprocess.call(['airmon-ng','start',poss[num-1]], stdout=open(os.devnull, 'w'), stderr=open(os.devnull, 'w'))
 			find_mon()  # recursive call
 			return
@@ -1641,12 +1655,14 @@ def find_mon():
 			for i in ifaces:
 				if i == IFACE:
 					print GR+'[+] '+W+'using interface "'+G+ IFACE +W+'"\n'
+					updatesqlstatus('[+] using interface "'+ IFACE +'"')
 					return
 		
 		IFACE=ifaces[0] # only one interface in monitor mode, we know which one it is
 		print GR+'[+] '+W+'defaulting to interface "'+G+ IFACE +W+'"\n'
 		return
 	print GR+'[+] '+W+'using interface "'+G+ IFACE +W+'"\n'
+	updatesqlstatus('[+] using interface "'+ IFACE +'"')
 
 ############################################################################### getmac()
 def getmac():
@@ -1980,6 +1996,7 @@ def dict_check():
 def attack(index):
 	""" checks if target is WPA or WEP, forwards to the proper method """
 	print GR+'\n[+] '+W+'attacking "'+G + TARGETS[index][8] + W+'"...'
+	updatesqlstatus('[+] attacking "' + TARGETS[index][8] + '"...')
 	if TARGETS[index][2].startswith('WPA'):
 		attack_wpa(index)
 	elif TARGETS[index][2].startswith('WEP'):
@@ -2350,6 +2367,8 @@ def attack_wep_all(index):
 						CRACKED += 1
 						print GR+'\n['+get_time(WEP_MAXWAIT,TIME_START)+'] '+G+'wep key found for "'+TARGETS[index][8]+'"!'
 						print GR+'['+get_time(WEP_MAXWAIT,TIME_START)+'] '+W+'the key is "'+C + pw + W+'", saved in '+G+'log.txt'
+						updatesqlstatus('wep key found for "'+TARGETS[index][8]+'"!')
+
 						
 						# only print the ascii version to the log file if it does not contain non-printable characters
 						if to_ascii(pw).find('non-print') == -1:
@@ -2526,6 +2545,7 @@ def attack_wep_all(index):
 							break
 					if wcount > 0:
 						print '\n'+R+'[+] '+wepname[wepnum]+' attack ran out of time',
+						updatesqlstatus('u[+] '+wepname[wepnum]+' attack ran out of time')
 			# end of while loop
 			print W
 			
@@ -2557,8 +2577,10 @@ def attack_wep_all(index):
 		# the attack stopped on it's own - ran out of time
 		if started_crack:
 			print GR+'[+] '+O+'attack unsuccessful!'+W+' unable to crack WEP key in time'
+			updatesqlstatus('[+] attack unsuccessful! unable to crack WEP key in time')
 		else:
 			print GR+'[+] '+O+'attack unsuccessful!'+W+' unable to generate enough IVS in time'
+			updatesqlstatus('[+] attack unsuccessful! unable to generate enough IVS in time')
 	
 	# kill processes
 	try:
@@ -3213,6 +3235,7 @@ def gettargets():
 			for x in ATTACK:
 				print '"'+G + TARGETS[x-1][8] + W+'"',
 			print ''
+			updatesqlstatus('[+] targeting: ' + ' '.join([TARGETS[x-1][8] for x in ATTACK])) #python list comprehension
 		return
 	
 	elif ESSID.startswith('pow>'):
