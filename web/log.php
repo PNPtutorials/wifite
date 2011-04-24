@@ -1,3 +1,25 @@
+<html>
+<head>
+<title>Wifite Log</title>
+
+<style type="text/css">
+<!--
+@import url("style.css");
+@import url("jquery.tablesorter.pager.css");
+-->
+</style>
+<script src="jquery-1.5.1.min.js"></script>  
+<script src="jquery.tablesorter.min.js"></script>  
+<script src="jquery.tablesorter.pager.js"></script>  
+<script>
+$(document).ready(function() {
+    $("#hor-zebra").tablesorter({widthFixed: true, widgets: ['zebra']}).tablesorterPager({container: $("#pager")}); 
+
+});
+</script>
+</head>
+<body>
+
 <!-- Table markup-->
 <table id="hor-zebra" class="tablesorter">
 

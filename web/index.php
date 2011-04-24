@@ -1,38 +1,40 @@
 <html>
 <head>
-<title>Wifite Log</title>
+<title>Wifite Status</title>
 <style type="text/css">
-<!--
-@import url("style.css");
-@import url("jquery.tablesorter.pager.css");
--->
+
+#status {
+  float: right;
+/*  width: 100px;*/
+}
+#ivsps {
+  float: left;
+  width: 225px;
+}
 </style>
 <script src="jquery-1.5.1.min.js"></script>  
-<script src="jquery.tablesorter.min.js"></script>  
-<script src="jquery.tablesorter.pager.js"></script>  
 <script>
 $(document).ready(function() {
 	$("#status").load("status.php");
-	//$("#log").load("log.php");
+	$("#ivsps").load("ivsps.php");
 
-    //$("#hor-zebra").tablesorter(); 
-    $("#hor-zebra").tablesorter({widthFixed: true, widgets: ['zebra']}).tablesorterPager({container: $("#pager")}); 
-	function updateStatus(){
-		$("#status").load("status.php");
-	}
-	setInterval( "updateStatus()", 5000);
+    function updateStatus(){
+	$("#status").load("status.php");
+    }
+    setInterval( "updateStatus()", 5000);
+    function updateIVsps(){
+	$("#ivsps").load("ivsps.php");
+    }
+    setInterval( "updateIVsps()", 5000);
+
 });
 </script>
 </head>
 <body>
-<div id="log">
-<?php include "log.php" ?>
-</div>
-
-<br />
-<br />
+<div id="ivsps"></div>
 <br />
 <div id="status"></div>
+<br />
 
 </body>
 </html>
