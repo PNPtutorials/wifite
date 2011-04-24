@@ -46,7 +46,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=77
+REVISION=78
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2283,7 +2283,7 @@ def attack_wep_all(index):
 			replaying=False
 			
 			# keep track of how many IVS we've captured, so we don't print every 5 seconds endlessly
-			while (time.time() - TIME_START) < WEP_MAXWAIT or WEP_MAXWAIT == 0:
+			while (time.time() - TIME_START) < WEP_MAXWAIT or WEP_MAXWAIT == 0 or (ivsps > 100):
 				try:
 					if proc_replay.poll() != None: # and wepnum != 0 and wepnum != 3:
 						# the attack stopped, it's not arp-replay or p0841 (chopchop/frag)
