@@ -46,7 +46,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=75
+REVISION=76
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -1381,6 +1381,12 @@ def updatesqlstatus(text):
 	db.execute("CREATE TABLE IF NOT EXISTS status(id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp int, status text)")
 	db.execute("INSERT INTO status (timestamp, status) VALUES (%i, '%s')" % (time.time(), text))
 	db.close()
+def updateivps(ivsps):
+ 	db = sqlite3.connect('log.db', isolation_level=None)
+	db.execute("CREATE TABLE IF NOT EXISTS ivsps(id INTEGER PRIMARY KEY, timestamp int, ivsps int)")
+	db.execute("REPLACE INTO ivsps (id, timestamp, ivsps) VALUES (1, %i, %i)" % (time.time(), ivsps))
+	db.close()
+
 
 
 ############################################################################### halp
@@ -2391,6 +2397,7 @@ def attack_wep_all(index):
 					print 'captured '+G+ str(ivs) +W+' ivs',
 					ivsps = (ivs-oldivs) / 5
 					print '('+G+str(ivsps)+W+'/sec)',
+					updateivps(ivsps)
 					
 					
 					if started_crack:
