@@ -46,7 +46,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=80
+REVISION=81
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -1374,12 +1374,12 @@ def logit(txt):
 def sqllogit(enc, essid, bssid, key, ascii=""):
 	db = sqlite3.connect('log.db', isolation_level=None)
 	db.execute("""CREATE TABLE IF NOT EXISTS log(id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp int, enc text, essid text, bssid text, key text, ascii text)""")
-	db.execute("""INSERT INTO log (timestamp, enc, essid, bssid, key, ascii) VALUES (%i, %s, %s, %s, %s, %s)""" % (time.time(), enc, essid, bssid, key, ascii))
+	db.execute("""INSERT INTO log (timestamp, enc, essid, bssid, key, ascii) VALUES (%i, '%s', '%s', '%s', '%s', '%s')""" % (time.time(), enc, essid, bssid, key, ascii))
 	db.close()
 def updatesqlstatus(text):
  	db = sqlite3.connect('log.db', isolation_level=None)
 	db.execute("""CREATE TABLE IF NOT EXISTS status(id INTEGER PRIMARY KEY AUTOINCREMENT, timestamp int, status text)""")
-	db.execute("""INSERT INTO status (timestamp, status) VALUES (%i, %s)""" % (time.time(), text))
+	db.execute("""INSERT INTO status (timestamp, status) VALUES (%i, '%s')""" % (time.time(), text))
 	db.close()
 def updateivps(ivsps):
  	db = sqlite3.connect('log.db', isolation_level=None)
