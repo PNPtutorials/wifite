@@ -46,7 +46,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=82
+REVISION=83
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -2870,7 +2870,7 @@ def attack_wpa(index):
 				# we have clients to attack!
 				if wpa_client_index < len(wpa_clients):
 					# index is within range, points at a real client
-					cmd.append('-h')
+					cmd.append('-c')
 					cmd.append(wpa_clients[wpa_client_index])
 				
 				wpa_client_index+=1 #increment index
