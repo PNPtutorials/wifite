@@ -46,7 +46,7 @@ except ImportError:
 	print '[!] unable to import tkinter -- GUI disabled'
 
 # current revision
-REVISION=83
+REVISION=84
 
 # default wireless interface (blank to prompt)
 # ex: wlan0, wlan1, rausb0
@@ -3102,7 +3102,7 @@ def has_handshake(capfile, essid, bssid):
         right_essid = (line.find("('" + essid + "')") != -1) and (line.lower().find(bssid.lower()))
       
       if right_essid:
-        if line.find(', good, ') != -1 or line.find(', workable, ') != -1 or line.find(', bad, ') != -1:
+        if line.find(', good, ') != -1 or line.find(', workable, ') != -1 or line.find('handshake found') != -1 or line.find(', bad, ') != -1:
           result = True
           break
     
