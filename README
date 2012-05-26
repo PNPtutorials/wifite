@@ -1,109 +1,38 @@
-WIFITE
+wifite v2
 =============
 written in python by
 derv82 at gmail dot com
 
 
-ABOUT
+about
 =============
-automates aircrack-ng suite to crack WEP/WPA encrypted network(s).
+automates aircrack-ng suite to crack WEP/WPA/WPS encrypted network(s).
 
 
-REQUIRED
+required
 =============
 python
 aircrack-ng suite:
     aircrack-ng, airmon-ng, airodump-ng
     aireplay-ng, packetforge-ng
-macchanger (only if CHANGE_MAC is set to True)
-various linux tools:
-    echo, rm, cp, ls, killall,
-    ifconfig, iwconfig, wc, xterm
+"iw" and "iwconfig"
 
 
-TESTED USING
+suggested
 =============
-Python:   2.4, 2.5.3
-Linux:    2.6.34
-Distro:   BackTrack4 RC1 (Ubuntu 8.10)
-Chipset:  RTL8187 (Alfa AWUS036H), RT2500 (Nintendo Wifi USB Connector)
-Router:   Netgear WPN824v3
-Caffeine: Dr Pepper
+reaver
+cowpatty
+pyrit
+tshark
 
 
-COPYING
+help
 =============
-this program is distrbuted under the GNU General Public License v3.
-the GPL is available here: http://www.gnu.org/licenses/gpl-3.0.txt
+./wifite.py -h
 
-feel free to distrubte this script for non-commercial purposes.
-you can edit this script at your heart's content!
-
-
-COMMAND LINE
-=============
-there are a lot of command-line options with wifite. check them out!
-./wifite.py -help
-
-
-DEFAULTS
-=============
-your wireless MAC address will be changed to that of a client on WEP network
-after the attack is complete, your MAC address will be changed back
-to disable, type -keepmac or --keep-mac, or deselect "change mac" in the GUI
-
-WEP attacks end if fake-authentication is unsuccessful.
-to disable, type -f or --force-fake, or select "ignore fake-auth" in the GUI
-
-clients connected to access points with hidden SSIDs are deauthenticated
-these deauths will only be sent while scanning for networks on a fixed channel
-to disable, type -nod or --no-deauth
-
-
-TIPS & TRICKS
-=============
-i recommend moving or copying your favorite WPA dictionary to this dir as:
-wordlist.txt
-if 'wordlist.txt' is in the same directory as this script, wifite will
-  use that list whenever it needs to crack a WPA...
- ... and it will never ask for you to enter a wordlist again!
-
-alternatively, in wifite.py, change:
-   DICT=''
-to:
-   DICT='/your/favorite/wordlist.txt'
-and the program will automatically use that wordlist instead of prompting.
-
-to avoid the whole matter, when using the GUI, enter 'none' as the dictionary
-no prompts will appear asking for a wordlist
-
-the -p (--power) option is to filter out APs that are too far away
-each wifi card is different, so it's up to you to find the power level
-where attacks fail.
-example: ./wifite.py -p 55
-
-
-interrupt options (during both WEP and WPA attacks):
-  pressing Ctrl+C (interrupt) during an attack will bring up a list of options
-  -move onto the next WEP method -- frag, chopchop, etc (WEP only)
-  -move onto the next target in the attack list
-  -skip attacks and move onto WPA cracking
-  -stop and exit the program immediately
-
-
-there's options you can edit in wifite.py (to save yourself some time):
- -CHANGE_MAC : default is False. when True, changes mac address to a client's
- -default WEP/WPA_MAXWAIT (how long before giving up on an attack)
- -WEP_PPS (packets per second)
- -all wep attack methods (WEP_CHOP _ARP _FRAG _P0841),
-     *set these =False to skip the attack method
-these save you from typing the command-line equivalents everytime.
-
-
-attempt to crack every nearby network, using darkc0de's wordlist:
-./wifite.py -all -d /pentest/passwords/wordlists/darkc0de.txt
-
+press ctrl+c at (nearly) any time for options
 
 
 ---------------------
-(c) 2010 derv merkler
+(c) 2012 derv merkler
+

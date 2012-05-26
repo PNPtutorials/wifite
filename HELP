@@ -1,93 +1,51 @@
+   COMMANDS
+	-check <file>	check capfile <file> for handshakes.
+	-cracked    	display previously-cracked access points
 
-  .;'                     `;,
- .;'  ,;'             `;,  `;,   WiFite r38
-.;'  ,;'  ,;'     `;,  `;,  `;,
-::   ::   :   ( )   :   ::   ::  mass WEP/WPA cracker
-':.  ':.  ':. /_\ ,:'  ,:'  ,:'
- ':.  ':.    /___\    ,:'  ,:'   designed for backtrack4
-  ':.       /_____\      ,:'
-           /       \
-
-Usage: python wifite.py [SETTINGS] [FILTERS]
-
-  -upgrade	 download/install latest revision
-
-  SETTINGS
-  -i, --iface	     e.g. -i wlan0
-             	 wireless interface
-             	 the program automatically selects a wifi device in monitor mode
-             	 prompts for input if no monitor-mode devices are found
-             	 using this switch avoids the prompt
-
-  -d, --dict	     e.g. -d /pentest/passwords/wordlists/darkc0de.lst
-             	 dictionary file for WPA cracking
-             	 the program will prompt for a wordlist file if any WPA targets
-             	 are selected for attack. using -d avoids this prompt
-             	 defaults to "wordlist.txt" found in same directory as wifite.py
-             	     e.g. -d "none"
-             	 does not attempt to crack WPA handshakes
-             	 only captures the wpa handshake and backs it up to hs/
-
-  --wpa-wait	     e.g. -wpaw 15
-          	 sets the maximum time to wait for a wpa handshake (in minutes)
-          	 enter "0" to wait endlessly
-
-  --no-strip	 strip non-handshake packets from .cap file
-         	 uses pyrit (or tshark) to strip out unnecessary packets.
-         	 greatly reduces the size of handshkae cap files
-
-  --wep-wait	     e.g. -wepw 10
-          	 sets the maximum time to wait for each WEP attack.
-          	 depending on the settings, this could take a long time
-          	 if the wait is 10 min, then EACH METHOD of attack gets 10 min
-          	 if you have all 4 WEP attacks selected, it would take 40 min
-          	 enter "0" to wait endlessly
-
-  --pps		     e.g. -pps 400
-          	 packets-per-second; only for WEP attacks.
-          	 more pps means more captured IVs, which means a faster crack
-          	 select smaller pps for weaker wifi cards and distant APs
-
-  --keep-mac	 do not change MAC address of wireless interface
-
-  --no-arp	 WEP disables arp-replay attack
-  --no-chop	 WEP disables chop-chop attack
-  --no-frag	 WEP disables fragmentation attack
-  --no-p0841	 WEP disables -p0841 attack
-
-  --force-fake	 during a WEP attack, if fake-auth fails, keep going
-              	 most WEP attacks require fake-authentication
-              	 the default is to stop the attack when fake-auth fails
-
-  --no-deauth	 disables the deauthing of clients on hidden APs
-             	 by default, wifite will deauth clients connected to hidden APs
-             	 *wifite only deauths hidden SSID clients in FIXED CHANNEL MODE*
-
-  --no-color	 do not display annoying colors (use system colors)
+   GLOBAL
+	-all         	attack all targets.              [off]
+	-i <iface>  	wireless interface for capturing [auto]
+	-mac         	anonymize mac address            [off]
+	-c <channel>	channel to scan for targets      [auto]
+	-e <essid>  	target a specific access point by ssid (name)  [ask]
+	-b <bssid>  	target a specific access point by bssid (mac)  [auto]
+	-showb       	display target BSSIDs after scan               [off]
+	-pow <db>   	attacks any targets with signal strenghth > db [0]
+	-quiet       	do not print list of APs during scan           [off]
 
 
-  FILTERS
-  -e, --essid	     e.g. -e "2WIRE759"
-             	 essid (name) of the access point (router)
-             	 this forces a narrow attack; no other networks will be attacked
+   WPA
+	-wpa        	only target WPA networks (works with -wps -wep)   [off]
+	-wpat <sec>   	time to wait for WPA attack to complete (seconds) [500]
+	-wpadt <sec>  	time to wait between sending deauth packets (sec) [10]
+	-strip      	strip handshake using tshark or pyrit             [off]
+	-crack <dic>	crack WPA handshakes using <dic> wordlist file    [off]
+	-dict <file>	specify dictionary to use when cracking WPA [phpbb.txt]
+	-aircrack   	verify handshake using aircrack [on]
+	-pyrit      	verify handshake using pyrit    [off]
+	-tshark     	verify handshake using tshark   [on]
+	-cowpatty   	verify handshake using cowpatty [off]
 
-  -all, --all	 target and attack all access points found
-           	 this is dangerous because most attacks require injection,
-           	 most wifi cards cann;t inject unless they are close to the AP
+   WEP
+	-wep        	only target WEP networks [off]
+	-pps <num>  	set the number of packets per second to inject [600]
+	-wept <sec> 	sec to wait for each attack, 0 implies endless [600]
+	-chopchop   	use chopchop attack      [on]
+	-arpreplay  	use arpreplay attack     [on]
+	-fragment   	use fragmentation attack [on]
+	-caffelatte 	use caffe-latte attack   [on]
+	-p0841      	use -p0841 attack        [on]
+	-hirte      	use hirte (cfrag) attack [on]
+	-nofakeauth 	stop attack if fake authentication fails    [off]
+	-wepca <n>  	start cracking when number of ivs surpass n [10000]
+	-wepsave    	save a copy of .cap files to this directory [off]
 
-  -p, --power	     e.g. -p 55
-             	 minimum power level (dB)
-             	 this is similar to the "-e all" option, except it filters APs
-             	 that are too far away for the attacks to be useful
+   WPS
+	-wps       	only target WPS networks         [off]
+	-wpst <sec>  	max wait for new retry before giving up (0: never)  [660]
+	-wpsratio <per>	min ratio of successful PIN attempts/total tries    [0]
+	-wpsretry <num>	max number of retries for same PIN before giving up [0]
 
-  -c, --channel	     e.g. -c 6
-               	 channel to scan
-               	 not using this switch defaults to all possible channels
-               	 only use -c or --channel if you know the channel to listen on
-
-  --no-wpa	 ignores all WPA-encrypted networks
-          	 useful when using --power or "-e all" attacks
-
-  --no-wep	 ignores all WEP-encrypted networks
-          	 useful when using filtered attacks like -p or "-e all"
+   EXAMPLE
+	./wifite.py -wps -wep -c 6 -pps 600
 
